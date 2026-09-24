@@ -1,0 +1,40 @@
+# ─── Global Dependencies ───
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+
+# ─── Environment Variables ───
+.env
+backend/.env
+frontend/.env.local
+!.env.example
+
+# ─── Backend ───
+backend/node_modules/
+backend/uploads/
+backend/*.db
+backend/*.sqlite
+
+# ─── Frontend ───
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.turbo/
+frontend/next-env.d.ts
+
+# ─── Build Output ───
+build/
+dist/
+
+# ─── Misc ───
+.DS_Store
+Thumbs.db
+*.pem
+*.tsbuildinfo
+.vercel/
+
+desktop.ini
+.agents
