@@ -1,8 +1,6 @@
 import multer from "multer";
 import path from "path";
 import { v2 as cloudinary } from "cloudinary";
-import pkg from "multer-storage-cloudinary";
-const { CloudinaryStorage } = pkg;
 
 const storageMode = process.env.STORAGE_MODE || "local"; // "local" or "cloud"
 const MAX_UPLOAD_BYTES = Number(process.env.MAX_UPLOAD_BYTES || 20 * 1024 * 1024);
@@ -52,24 +50,45 @@ if (storageMode === "cloud") {
     api_secret: process.env.CLOUDINARY_API_SECRET,
   });
 
-  const cloudStorage = new CloudinaryStorage({
-    cloudinary,
-    params: {
-      folder: "ecommerce-products",
-      resource_type: "auto", // allow images and videos
-      allowed_formats: [
-        "jpg",
-        "jpeg",
-        "png",
-        "webp",
-        "gif",
-        "mp4",
-        "webm",
-        "mov",
-        "mkv",
-      ],
+  const cloudParams = {
+    folder: "ecommerce-products",
+    resource_type: "auto", // allow images and videos
+    allowed_formats: [
+      "jpg",
+      "jpeg",
+      "png",
+      "webp",
+      "gif",
+      "mp4",
+      "webm",
+      "mov",
+      "mkv",
+    ],
+  };
+
+  // Minimal multer storage engine streaming to Cloudinary (SDK v2).
+  // Exposes file.path (secure URL) and file.filename (public_id), as the controllers expect.
+  const cloudStorage = {
+    _handleFile(_req, file, cb) {
+      const stream = cloudinary.uploader.upload_stream(cloudParams, (err, result) => {
+        if (err) return cb(err);
+        cb(null, {
+          path: result.secure_url,
+          filename: result.public_id,
+          size: result.bytes,
+          resourceType: result.resource_type,
+        });
+      });
+      file.stream.pipe(stream);
     },
-  });
+    _removeFile(_req, file, cb) {
+      cloudinary.uploader.destroy(
+        file.filename,
+        { resource_type: file.resourceType || "image", invalidate: true },
+        (err) => cb(err || null)
+      );
+    },
+  };
 
   upload = multer({ storage: cloudStorage, ...sharedMulterOptions });
 } else {
