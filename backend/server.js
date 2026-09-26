@@ -37,7 +37,8 @@ dotenv.config({ path: ".env" });
 const app = express();
 
 // If behind a reverse proxy (nginx, Vercel, etc.)
-app.set("trust proxy", 1);
+// Number of proxy hops in front of the app (e.g. 2 = Vercel rewrite + Render LB)
+app.set("trust proxy", Number(process.env.TRUST_PROXY ?? 1));
 
 // Connect to MongoDB
 connectDB();
@@ -51,6 +52,10 @@ const allowedOrigins = String(
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
+// Optional pattern for dynamic origins (e.g. Vercel preview deployments)
+const allowedOriginRegex = process.env.CORS_ORIGIN_REGEX
+  ? new RegExp(process.env.CORS_ORIGIN_REGEX)
+  : null;
 
 app.use(
   cors({
@@ -58,6 +63,7 @@ app.use(
       // Allow non-browser clients and same-origin requests with no Origin header.
       if (!origin) return callback(null, true);
       if (allowedOrigins.includes(origin)) return callback(null, true);
+      if (allowedOriginRegex?.test(origin)) return callback(null, true);
       return callback(new Error("CORS origin not allowed"));
     },
     credentials: true,

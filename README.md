@@ -72,6 +72,10 @@ frontend/   Next.js app, pages, components, Redux store
 - Optional: Brevo API key for email sending
 - Optional: hCaptcha keys for CAPTCHA
 
+## Deployment
+
+See [DEPLOY.md](DEPLOY.md) for Render (backend) + Vercel (frontend) setup, environment variables, CORS and cookies.
+
 ## Setup
 
 Install backend dependencies:

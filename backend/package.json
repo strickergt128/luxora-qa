@@ -30,6 +30,9 @@
     "speakeasy": "^2.0.0"
   },
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "devDependencies": {
     "nodemon": "^3.1.10"
   }

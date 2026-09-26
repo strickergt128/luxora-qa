@@ -1,0 +1,81 @@
+# Render Blueprint: backend API (Express + MongoDB)
+# Deploy: Render dashboard -> New -> Blueprint -> select this repo.
+# Variables marked `sync: false` are prompted for in the dashboard.
+services:
+  - type: web
+    name: luxora-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      # Vercel rewrite + Render load balancer
+      - key: TRUST_PROXY
+        value: "2"
+
+      # Database (MongoDB Atlas)
+      - key: MONGODB_URI
+        sync: false
+
+      # JWT
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_MFA_SECRET
+        generateValue: true
+      - key: ACCESS_TOKEN_TTL
+        value: 15m
+      - key: REFRESH_TOKEN_TTL
+        value: 30d
+      - key: MFA_CHALLENGE_TTL
+        value: 5m
+
+      # Frontend / CORS
+      - key: FRONTEND_URL
+        sync: false # https://<project>.vercel.app
+      - key: CORS_ORIGINS
+        sync: false # https://<project>.vercel.app
+      - key: CORS_ORIGIN_REGEX
+        sync: false # ^https://<project>(-[a-z0-9-]+)?\.vercel\.app$
+
+      # Uploads (Cloudinary; Render's disk is ephemeral)
+      - key: STORAGE_MODE
+        value: cloud
+      - key: MAX_UPLOAD_BYTES
+        value: "20971520"
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+
+      # Email (set EMAIL_DISABLED=false and BREVO_API_KEY to send mail)
+      - key: EMAIL_DISABLED
+        value: "true"
+      - key: EMAIL_PROVIDER
+        value: brevo
+      - key: EMAIL_FROM
+        value: no-reply@example.com
+      - key: EMAIL_FROM_NAME
+        value: Luxora
+      - key: EMAIL_REPLY_TO
+        value: support@example.com
+      - key: BREVO_API_KEY
+        sync: false
+
+      # Security / business
+      - key: HCAPTCHA_SECRET
+        sync: false
+      - key: ENABLE_TEST_EMAIL_ROUTE
+        value: "false"
+      - key: TAX_RATE
+        value: "0.05"
+      - key: RETURN_WINDOW_DAYS
+        value: "7"
