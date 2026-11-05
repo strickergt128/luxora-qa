@@ -39,3 +39,8 @@ desktop.ini
 .agents
 # ─── Salidas locales ───
 Claude outputs/
+
+# ─── Reportes de pruebas ───
+coverage/
+reports/
+qa/cobertura-criticos.json
