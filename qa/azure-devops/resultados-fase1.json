@@ -1,0 +1,354 @@
+{
+  "ambiente": "https://luxora-qa.vercel.app (frontend en Vercel, API en /api hacia Render, MongoDB Atlas)",
+  "fecha": "2026-09-25",
+  "ejecutor": "Dilan David Castro Diaz",
+  "metodo": "Los casos se ejecutaron desde el navegador sobre el ambiente desplegado, llamando a los mismos endpoints de /api que usa la interfaz; se registró cada solicitud con su código, tiempo y respuesta.",
+  "resultados": {
+    "CP-01": {
+      "resultado": "Aprobado",
+      "obtenido": "POST /api/auth/register con contraseña de 6 caracteres respondió 201, se emitió token y user.role = user."
+    },
+    "CP-02": {
+      "resultado": "Aprobado",
+      "obtenido": "Registro con user@luxora.com respondió 400 \"Email already used\"."
+    },
+    "CP-03": {
+      "resultado": "Fallido",
+      "defecto": "DEF-01",
+      "obtenido": "Registro con contraseña Abc12 (5 caracteres) respondió 201 y el login posterior con esa contraseña respondió 200 con token."
+    },
+    "CP-04": {
+      "resultado": "Aprobado",
+      "obtenido": "Registro con role admin respondió 201 con role user; GET /api/admin/users con ese token respondió 403 \"Admin only\"."
+    },
+    "CP-05": {
+      "resultado": "Aprobado",
+      "obtenido": "Login respondió 200 con accessToken; document.cookie no expone rt (HttpOnly) y POST /api/auth/refresh respondió 200 usando la cookie."
+    },
+    "CP-06": {
+      "resultado": "Aprobado",
+      "obtenido": "Login con contraseña incorrecta respondió 400 \"Invalid credentials\" sin token."
+    },
+    "CP-07": {
+      "resultado": "Aprobado",
+      "obtenido": "Tras bloquear la cuenta, el login respondió 403 \"Account blocked\"."
+    },
+    "CP-08": {
+      "resultado": "Aprobado",
+      "obtenido": "Verificación del segundo factor con 000000 respondió 400 \"Invalid code\" sin token."
+    },
+    "CP-09": {
+      "resultado": "Fallido",
+      "defecto": "DEF-02",
+      "obtenido": "POST /api/cart con qty 0 respondió 500 \"Internal server error\"; el carrito siguió vacío."
+    },
+    "CP-10": {
+      "resultado": "Aprobado",
+      "obtenido": "La cantidad llegó a 5 con subtotal 44 500."
+    },
+    "CP-11": {
+      "resultado": "Aprobado",
+      "obtenido": "PUT a cantidad 6 respondió 400 \"Not enough stock\"; el carrito siguió en 5 y 44 500."
+    },
+    "CP-12": {
+      "resultado": "Fallido",
+      "defecto": "DEF-03",
+      "obtenido": "Con 5 unidades en el carrito (existencia 5), POST /api/cart qty 1 respondió 200 y el carrito quedó con 6 unidades y subtotal 53 400."
+    },
+    "CP-13": {
+      "resultado": "Aprobado",
+      "obtenido": "MIN2100 aceptado: descuento 200, subtotal con descuento 1 900."
+    },
+    "CP-14": {
+      "resultado": "Aprobado",
+      "obtenido": "MIN2101 rechazado con 400 \"Minimum order ₹2101\"."
+    },
+    "CP-15": {
+      "resultado": "Aprobado",
+      "obtenido": "VENCIDO rechazado con 400 \"Coupon not in active window\"."
+    },
+    "CP-16": {
+      "resultado": "Aprobado",
+      "obtenido": "Tras un pedido con UNOXCLIENTE, aplicarlo de nuevo respondió 400 \"Per-user limit reached\"."
+    },
+    "CP-17": {
+      "resultado": "Aprobado",
+      "obtenido": "PCT10TOPE sobre 12 500: descuento 1 000 y subtotal con descuento 11 500."
+    },
+    "CP-18": {
+      "resultado": "Aprobado",
+      "obtenido": "RELOJES15 sobre 12 950: descuento 1 875 (solo el reloj) y subtotal con descuento 11 075."
+    },
+    "CP-19": {
+      "resultado": "Aprobado",
+      "obtenido": "Pedido 201 pending COD: subtotal 900, descuento 100, impuesto 40, envío 99, total 939; existencia 41 → 39; carrito vacío; FIJO100 con 1 uso."
+    },
+    "CP-20": {
+      "resultado": "Aprobado",
+      "obtenido": "400 \"Not enough stock for Skeleton Automatic Watch\"; no se creó pedido y las existencias no cambiaron."
+    },
+    "CP-21": {
+      "resultado": "Fallido",
+      "defecto": "DEF-04",
+      "obtenido": "Con LIMITE0 en límite global 0 (el carrito ya mostraba \"Coupon usage limit reached\"), POST /api/orders respondió 201 con descuento 100 y total 368; LIMITE0 quedó con 1 uso sobre límite 0."
+    },
+    "CP-22": {
+      "resultado": "Aprobado",
+      "obtenido": "pending → confirmed → shipped → delivered aceptados; la bitácora del pedido muestra 4 registros con usuario, rol y fecha."
+    },
+    "CP-23": {
+      "resultado": "Fallido",
+      "defecto": "DEF-05",
+      "obtenido": "delivered → pending respondió 200 \"Order status updated to pending\"; el pedido quedó pending y la bitácora pasó de 4 a 5 registros."
+    },
+    "CP-24": {
+      "resultado": "Fallido",
+      "defecto": "DEF-06",
+      "obtenido": "pending → cancelled respondió 200 (correcto) y cancelled → shipped también respondió 200; el pedido quedó shipped."
+    },
+    "CP-25": {
+      "resultado": "Fallido",
+      "defecto": "DEF-07",
+      "obtenido": "pending → delivered respondió 200; el pedido quedó delivered sin pasar por confirmed ni shipped."
+    },
+    "CP-26": {
+      "resultado": "Aprobado",
+      "obtenido": "Devolución de 2 unidades respondió 201 requested con precio 450 y aparece en /api/admin/returns."
+    },
+    "CP-27": {
+      "resultado": "Fallido",
+      "defecto": "DEF-08",
+      "obtenido": "Devolución sobre un pedido pending respondió 201 requested; GET de devoluciones del pedido devuelve 1 solicitud."
+    },
+    "CP-28": {
+      "resultado": "Aprobado",
+      "obtenido": "Pedir 3 de 2 unidades respondió 400 \"Requested quantity exceeds available returnable quantity\"."
+    },
+    "CP-29": {
+      "resultado": "Aprobado",
+      "obtenido": "approved → received → refunded aceptados, con approvedAt, receivedAt, refundedAt y reembolso manual REF-001 por 900."
+    },
+    "CP-30": {
+      "resultado": "Fallido",
+      "defecto": "DEF-09",
+      "obtenido": "refunded → approved respondió 200 \"Return approved\"; la solicitud quedó approved y su approvedAt se sobrescribió."
+    },
+    "PNF-02": {
+      "resultado": "Aprobado",
+      "obtenido": "10 de 10 mediciones ≤ 3 s (entre 0.99 s y 1.23 s: login más carga de la página principal y sus llamadas a la API)."
+    },
+    "PNF-04": {
+      "resultado": "Aprobado",
+      "obtenido": "Ninguna respuesta de /api/auth/register (5), /api/auth/login (5), /api/auth/me, /api/admin/users ni /api/admin/users/:id incluye el campo password. Se adjunta captura de MongoDB Atlas con el campo password de 5 usuarios (prefijo $2b$10$)."
+    },
+    "PNF-05": {
+      "resultado": "Fallido",
+      "defecto": "DEF-10",
+      "obtenido": "El límite por correo funciona (6.º login respondió 429 con Retry-After 900), pero el límite por IP no: el 6.º registro desde la misma IP en menos de 1 h respondió 201 y más de 20 logins en 15 min no recibieron 429."
+    },
+    "PNF-06": {
+      "resultado": "Aprobado",
+      "obtenido": "24 rutas GET de /api/admin: 401 sin token y 403 con token de comprador y de vendedor en todas. Un token de acceso vencido (emitido 03:43:10Z, vencido 03:58:10Z) respondió 401 \"Token invalid\" en GET /api/auth/me."
+    }
+  },
+  "defectos": [
+    {
+      "id": "DEF-01",
+      "titulo": "La API de registro acepta contraseñas de menos de 6 caracteres",
+      "caso": "CP-03",
+      "requerimientos": [
+        "RF-01"
+      ],
+      "inciso": "RF-01 (c)",
+      "modulo": "Autenticación y sesión",
+      "severidad": "3 - Medium",
+      "prioridad": 2,
+      "pasos": [
+        "Enviar POST https://luxora-qa.vercel.app/api/auth/register con {\"name\":\"Prueba Corta\",\"email\":\"corta@luxora.com\",\"password\":\"Abc12\"}.",
+        "Enviar POST /api/auth/login con corta@luxora.com / Abc12."
+      ],
+      "esperado": "El registro responde 400 con un mensaje de longitud mínima y la cuenta no se crea.",
+      "obtenido": "El registro responde 201 y el login con la contraseña de 5 caracteres responde 200 con token. Solo la interfaz valida la longitud."
+    },
+    {
+      "id": "DEF-02",
+      "titulo": "Agregar al carrito con cantidad 0 devuelve error 500",
+      "caso": "CP-09",
+      "requerimientos": [
+        "RF-05"
+      ],
+      "inciso": "RF-05 (a)",
+      "modulo": "Carrito y cupones",
+      "severidad": "3 - Medium",
+      "prioridad": 3,
+      "pasos": [
+        "Iniciar sesión como user@luxora.com con el carrito vacío.",
+        "Enviar POST /api/cart con {\"productId\":\"<id de Geometric Gold Pendant>\",\"qty\":0}."
+      ],
+      "esperado": "400 con un mensaje de cantidad inválida.",
+      "obtenido": "500 \"Internal server error\" (la validación del modelo falla sin controlarse)."
+    },
+    {
+      "id": "DEF-03",
+      "titulo": "El carrito permite superar la existencia al agregar un producto que ya está en él",
+      "caso": "CP-12",
+      "requerimientos": [
+        "RF-05"
+      ],
+      "inciso": "RF-05 (b)",
+      "modulo": "Carrito y cupones",
+      "severidad": "2 - High",
+      "prioridad": 1,
+      "pasos": [
+        "Tener en el carrito 5 Geometric Gold Pendant (existencia 5).",
+        "En el detalle del producto pulsar Add to cart (POST /api/cart qty 1).",
+        "Abrir /cart."
+      ],
+      "esperado": "\"Not enough stock\" y el carrito sigue con 5 unidades.",
+      "obtenido": "200; el carrito queda con 6 unidades y subtotal 53 400. Solo se compara la cantidad nueva con la existencia, no la suma."
+    },
+    {
+      "id": "DEF-04",
+      "titulo": "El pedido aplica un cupón cuyo límite global ya se alcanzó (límite 0)",
+      "caso": "CP-21",
+      "requerimientos": [
+        "RF-08",
+        "RF-06"
+      ],
+      "inciso": "RF-08 (c), RF-06 (e)",
+      "modulo": "Pedidos y devoluciones",
+      "severidad": "2 - High",
+      "prioridad": 1,
+      "pasos": [
+        "Crear LIMITE0 (fijo 100, límite global 5) y aplicarlo a un carrito con 1 Titanium Cuff Links.",
+        "Como administrador, cambiar el límite global de LIMITE0 a 0.",
+        "Enviar POST /api/orders con dirección y envío standard."
+      ],
+      "esperado": "Pedido sin descuento con total 473 y LIMITE0 con 0 usos.",
+      "obtenido": "Pedido con descuento 100 y total 368; LIMITE0 queda con 1 uso sobre un límite de 0. El pedido trata el límite 0 como \"sin límite\" mientras el carrito lo rechaza."
+    },
+    {
+      "id": "DEF-05",
+      "titulo": "Un pedido delivered puede regresar a pending",
+      "caso": "CP-23",
+      "requerimientos": [
+        "RF-10"
+      ],
+      "inciso": "RF-10 (a)",
+      "modulo": "Pedidos y devoluciones",
+      "severidad": "2 - High",
+      "prioridad": 1,
+      "pasos": [
+        "Llevar un pedido a delivered (confirmed, shipped, delivered).",
+        "En /admin/orders cambiarlo a pending (PATCH /api/admin/orders/:id/status {\"status\":\"pending\"})."
+      ],
+      "esperado": "Rechazo por transición no permitida; el pedido sigue delivered.",
+      "obtenido": "200 \"Order status updated to pending\"; el pedido queda pending y la bitácora registra el cambio."
+    },
+    {
+      "id": "DEF-06",
+      "titulo": "Un pedido cancelled puede pasar a shipped",
+      "caso": "CP-24",
+      "requerimientos": [
+        "RF-10"
+      ],
+      "inciso": "RF-10 (a)",
+      "modulo": "Pedidos y devoluciones",
+      "severidad": "2 - High",
+      "prioridad": 1,
+      "pasos": [
+        "Cambiar un pedido pending a cancelled.",
+        "Cambiar el mismo pedido a shipped."
+      ],
+      "esperado": "El segundo cambio se rechaza y el pedido sigue cancelled.",
+      "obtenido": "200; el pedido queda shipped."
+    },
+    {
+      "id": "DEF-07",
+      "titulo": "Un pedido pending puede marcarse delivered sin pasar por confirmed y shipped",
+      "caso": "CP-25",
+      "requerimientos": [
+        "RF-10"
+      ],
+      "inciso": "RF-10 (a)",
+      "modulo": "Pedidos y devoluciones",
+      "severidad": "3 - Medium",
+      "prioridad": 2,
+      "pasos": [
+        "En /admin/orders cambiar un pedido pending directamente a delivered."
+      ],
+      "esperado": "Rechazo; el pedido sigue pending.",
+      "obtenido": "200; el pedido queda delivered."
+    },
+    {
+      "id": "DEF-08",
+      "titulo": "Se acepta una devolución de un pedido que no ha sido entregado",
+      "caso": "CP-27",
+      "requerimientos": [
+        "RF-11"
+      ],
+      "inciso": "RF-11 (a)",
+      "modulo": "Pedidos y devoluciones",
+      "severidad": "2 - High",
+      "prioridad": 1,
+      "pasos": [
+        "Crear un pedido con 1 Titanium Cuff Links (queda pending).",
+        "Enviar POST /api/orders/:id/returns con {\"items\":[{\"product\":\"<id>\",\"qty\":1}],\"reason\":\"Prueba\"}."
+      ],
+      "esperado": "400 \"Order not delivered yet\" y ninguna solicitud creada.",
+      "obtenido": "201 requested. Si el pedido no tiene registro de entrega, la API usa la fecha de creación como fecha de entrega. La interfaz oculta el botón, pero la API no lo impide."
+    },
+    {
+      "id": "DEF-09",
+      "titulo": "Una devolución refunded puede regresar a approved",
+      "caso": "CP-30",
+      "requerimientos": [
+        "RF-12"
+      ],
+      "inciso": "RF-12 (d)",
+      "modulo": "Pedidos y devoluciones",
+      "severidad": "2 - High",
+      "prioridad": 1,
+      "pasos": [
+        "Llevar una devolución a refunded (approved, received, refunded).",
+        "Enviar PATCH /api/admin/returns/:id/status con {\"status\":\"approved\"}."
+      ],
+      "esperado": "400 \"Request already closed\"; la solicitud sigue refunded.",
+      "obtenido": "200 \"Return approved\"; la solicitud queda approved y approvedAt se sobrescribe, aunque ya tiene reembolso registrado."
+    },
+    {
+      "id": "DEF-10",
+      "titulo": "Los límites de intentos por IP no se aplican en el ambiente desplegado",
+      "caso": "PNF-05",
+      "requerimientos": [
+        "RNF-05"
+      ],
+      "inciso": "RNF-05",
+      "modulo": "Autenticación y sesión",
+      "severidad": "2 - High",
+      "prioridad": 2,
+      "pasos": [
+        "Desde un mismo navegador, registrar 6 cuentas nuevas en menos de 1 hora en https://luxora-qa.vercel.app.",
+        "Hacer más de 10 logins en menos de 15 minutos con distintas cuentas."
+      ],
+      "esperado": "El 6.º registro y el 11.º login desde la misma IP responden 429.",
+      "obtenido": "Todos responden 201/200. El límite por correo sí funciona. Posible causa (a confirmar): detrás del proxy de Vercel y Render, req.ip no corresponde a la IP real del cliente con trust proxy = 1."
+    },
+    {
+      "id": "DEF-11",
+      "titulo": "Una calificación de reseña fuera de rango devuelve 500 y una decimal se acepta",
+      "caso": "Exploratoria",
+      "requerimientos": [],
+      "inciso": "Fuera del alcance de los RF (módulo de reseñas)",
+      "modulo": "Reseñas",
+      "severidad": "3 - Medium",
+      "prioridad": 3,
+      "pasos": [
+        "Como comprador con un pedido de Titanium Cuff Links, enviar POST /api/reviews con rating 6.",
+        "Enviar POST /api/reviews con rating 4.5."
+      ],
+      "esperado": "400 para 6; para 4.5, rechazo o redondeo a entero (la interfaz usa estrellas enteras de 1 a 5).",
+      "obtenido": "rating 6 → 500 \"Internal server error\"; rating 4.5 → 201 y el promedio del producto pasa a 4.5."
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+﻿clave,tipo,id,titulo,url
+EPIC,Epic,21,"Luxora E-Commerce — Proyecto ACS 2026",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/21
+CU-01,Feature,22,"CU-01 — Registrar cuenta",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/22
+CU-02,Feature,23,"CU-02 — Iniciar sesión",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/23
+CU-03,Feature,24,"CU-03 — Gestionar carrito",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/24
+CU-04,Feature,25,"CU-04 — Aplicar cupón de descuento",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/25
+CU-05,Feature,26,"CU-05 — Realizar pedido",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/26
+CU-06,Feature,27,"CU-06 — Actualizar estado de pedido",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/27
+CU-07,Feature,28,"CU-07 — Solicitar devolución",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/28
+CU-08,Feature,29,"CU-08 — Resolver devolución",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/29
+FEATURE-RNF,Feature,30,"Requerimientos no funcionales",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/30
+RF-01,User Story,31,"RF-01 — Validaciones del registro",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/31
+RF-02,User Story,32,"RF-02 — Rol permitido en el registro",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/32
+RF-03,User Story,33,"RF-03 — Inicio de sesión",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/33
+RF-04,User Story,34,"RF-04 — Segundo factor de administración",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/34
+RF-05,User Story,35,"RF-05 — Carrito",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/35
+RF-06,User Story,36,"RF-06 — Validez del cupón",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/36
+RF-07,User Story,37,"RF-07 — Cálculo y alcance del descuento",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/37
+RF-08,User Story,38,"RF-08 — Creación del pedido",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/38
+RF-09,User Story,39,"RF-09 — Totales del pedido",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/39
+RF-10,User Story,40,"RF-10 — Estados del pedido",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/40
+RF-11,User Story,41,"RF-11 — Solicitud de devolución",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/41
+RF-12,User Story,42,"RF-12 — Estados de la devolución",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/42
+RNF-01,User Story,43,"RNF-01 — Tiempo de respuesta del catálogo",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/43
+RNF-02,User Story,44,"RNF-02 — Tiempo de inicio de sesión",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/44
+RNF-03,User Story,45,"RNF-03 — Estabilidad bajo carga",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/45
+RNF-04,User Story,46,"RNF-04 — Protección de contraseñas",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/46
+RNF-05,User Story,47,"RNF-05 — Protección contra fuerza bruta",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/47
+RNF-06,User Story,48,"RNF-06 — Control de acceso a administración",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/48
+CP-01,Test Case,49,"CP-01 — Registro con datos válidos y contraseña de 6 caracteres",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/49
+CP-02,Test Case,50,"CP-02 — Registro con correo ya registrado",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/50
+CP-03,Test Case,51,"CP-03 — Registro por API con contraseña de 5 caracteres",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/51
+CP-04,Test Case,52,"CP-04 — Registro por API enviando el rol admin",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/52
+CP-05,Test Case,53,"CP-05 — Login con credenciales correctas y cuenta activa",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/53
+CP-06,Test Case,54,"CP-06 — Login con contraseña incorrecta",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/54
+CP-07,Test Case,55,"CP-07 — Login de una cuenta bloqueada",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/55
+CP-08,Test Case,56,"CP-08 — Segundo factor con código incorrecto",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/56
+CP-09,Test Case,57,"CP-09 — Agregar al carrito con cantidad 0",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/57
+CP-10,Test Case,58,"CP-10 — Agregar una cantidad igual a la existencia",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/58
+CP-11,Test Case,59,"CP-11 — Agregar una cantidad mayor a la existencia",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/59
+CP-12,Test Case,60,"CP-12 — Agregar unidades que superan la existencia acumulada",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/60
+CP-13,Test Case,61,"CP-13 — Cupón válido con subtotal igual al mínimo",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/61
+CP-14,Test Case,62,"CP-14 — Cupón con subtotal un valor por debajo del mínimo",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/62
+CP-15,Test Case,63,"CP-15 — Cupón vencido",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/63
+CP-16,Test Case,64,"CP-16 — Cupón con el límite por usuario alcanzado",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/64
+CP-17,Test Case,65,"CP-17 — Descuento porcentual que supera el tope",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/65
+CP-18,Test Case,66,"CP-18 — Cupón restringido a una categoría",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/66
+CP-19,Test Case,67,"CP-19 — Pedido con envío express y cupón fijo",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/67
+CP-20,Test Case,68,"CP-20 — Pedido con un producto sin existencia suficiente",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/68
+CP-21,Test Case,69,"CP-21 — Pedido con un cupón cuyo límite global cambió a 0",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/69
+CP-22,Test Case,70,"CP-22 — Ciclo completo del pedido hasta delivered",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/70
+CP-23,Test Case,71,"CP-23 — Pedido delivered regresado a pending",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/71
+CP-24,Test Case,72,"CP-24 — Cancelar un pedido y luego marcarlo shipped",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/72
+CP-25,Test Case,73,"CP-25 — Pedido pending marcado directamente como delivered",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/73
+CP-26,Test Case,74,"CP-26 — Devolución de todas las unidades de un pedido entregado",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/74
+CP-27,Test Case,75,"CP-27 — Devolución de un pedido pending",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/75
+CP-28,Test Case,76,"CP-28 — Devolución de más unidades que las compradas",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/76
+CP-29,Test Case,77,"CP-29 — Ciclo completo de la devolución hasta refunded",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/77
+CP-30,Test Case,78,"CP-30 — Devolución refunded regresada a approved",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/78
+PNF-01,Test Case,79,"PNF-01 — Verificación de tiempo de respuesta del catálogo",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/79
+PNF-02,Test Case,80,"PNF-02 — Verificación de tiempo de inicio de sesión",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/80
+PNF-03,Test Case,81,"PNF-03 — Verificación de estabilidad bajo carga",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/81
+PNF-04,Test Case,82,"PNF-04 — Verificación de protección de contraseñas",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/82
+PNF-05,Test Case,83,"PNF-05 — Verificación de protección contra fuerza bruta",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/83
+PNF-06,Test Case,84,"PNF-06 — Verificación de control de acceso a administración",https://dev.azure.com/dilancastro7/ACS-Proyecto-Luxora/_workitems/edit/84

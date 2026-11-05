@@ -1,0 +1,1009 @@
+{
+  "proyecto": "Luxora E-Commerce — Proyecto ACS 2026",
+  "casos_de_uso": [
+    {
+      "id": "CU-01",
+      "nombre": "Registrar cuenta",
+      "actor": "Visitante",
+      "precondicion": "el visitante no tiene sesión y el correo que usará no está registrado.",
+      "flujo_principal": [
+        "El visitante abre la página de registro (/auth/register).",
+        "Ingresa nombre, correo, contraseña y confirmación de contraseña.",
+        "El sistema valida que ningún campo esté vacío, que la contraseña tenga al menos 6 caracteres y que ambas contraseñas coincidan.",
+        "El sistema crea la cuenta con rol comprador, cifra la contraseña e inicia la sesión.",
+        "El sistema envía el correo de bienvenida y redirige a la tienda."
+      ],
+      "flujos_alternos": [
+        "A1 — Correo ya registrado (paso 4): el sistema responde \"Email already used\" y no crea la cuenta.",
+        "A2 — Datos inválidos (paso 3): contraseña menor de 6 caracteres o confirmación distinta; el sistema muestra \"Password must be at least 6 characters\" o \"Passwords do not match\".",
+        "A3 — Límite de registros (paso 4): más de 5 registros desde la misma IP en una hora; el sistema responde 429 y bloquea temporalmente."
+      ],
+      "postcondicion": "existe un usuario activo con rol user y una sesión abierta."
+    },
+    {
+      "id": "CU-02",
+      "nombre": "Iniciar sesión",
+      "actor": "Comprador, Vendedor o Administrador",
+      "precondicion": "el usuario tiene una cuenta registrada.",
+      "flujo_principal": [
+        "El usuario abre Sign in (/auth/login) e ingresa correo y contraseña.",
+        "El sistema verifica las credenciales y que la cuenta esté activa.",
+        "El sistema emite un token de acceso (15 min) y un token de renovación en cookie httpOnly (30 días).",
+        "El sistema redirige a la página desde la que se pidió el login o, por defecto, a la tienda (al panel /admin en el caso del administrador)."
+      ],
+      "flujos_alternos": [
+        "A1 — Credenciales incorrectas (paso 2): el sistema responde \"Invalid credentials\" sin indicar si el correo existe.",
+        "A2 — Cuenta bloqueada (paso 2): el sistema responde 403 \"Account blocked\".",
+        "A3 — Administrador con segundo factor (paso 3): si el rol es admin o subadmin, el sistema pide el código TOTP de 6 dígitos antes de emitir tokens. Si el administrador aún no lo configuró, muestra un QR para enrolarlo.",
+        "A4 — Código TOTP incorrecto (A3): el sistema responde \"Invalid code\" y no emite tokens.",
+        "A5 — Demasiados intentos (paso 2): más de 5 intentos con el mismo correo o 10 desde la misma IP en 15 min; el sistema responde 429."
+      ],
+      "postcondicion": "el usuario tiene una sesión válida con los permisos de su rol."
+    },
+    {
+      "id": "CU-03",
+      "nombre": "Gestionar carrito",
+      "actor": "Comprador",
+      "precondicion": "el comprador inició sesión y el producto está activo con existencia.",
+      "flujo_principal": [
+        "En el detalle del producto, el comprador elige la cantidad y pulsa Add to cart.",
+        "El sistema valida que la cantidad no supere la existencia y agrega el producto con el precio vigente en ese momento.",
+        "En /cart, el comprador cambia cantidades o elimina productos.",
+        "El sistema recalcula el subtotal como suma de precio × cantidad."
+      ],
+      "flujos_alternos": [
+        "A1 — Existencia insuficiente (pasos 2 y 3): el sistema responde \"Not enough stock\" y no cambia el carrito.",
+        "A2 — Producto ya en el carrito (paso 2): el sistema suma la nueva cantidad a la existente en lugar de duplicar la línea.",
+        "A3 — Sin sesión (paso 1): el sistema redirige a Sign in."
+      ],
+      "postcondicion": "el carrito refleja los productos, cantidades y subtotal actualizados."
+    },
+    {
+      "id": "CU-04",
+      "nombre": "Aplicar cupón de descuento",
+      "actor": "Comprador",
+      "precondicion": "el carrito tiene al menos un producto y un administrador creó el cupón.",
+      "flujo_principal": [
+        "En /cart, el comprador escribe el código del cupón y lo aplica.",
+        "El sistema convierte el código a mayúsculas y verifica que esté activo, vigente, que el subtotal alcance el mínimo, que no se haya agotado el límite global ni el límite por usuario y que haya productos elegibles.",
+        "El sistema calcula el descuento y muestra subtotal, descuento y subtotal con descuento."
+      ],
+      "flujos_alternos": [
+        "A1 — Código inexistente (paso 2): \"Invalid code\".",
+        "A2 — Cupón inactivo o fuera de vigencia (paso 2): \"Coupon inactive\" o \"Coupon not in active window\".",
+        "A3 — Subtotal bajo el mínimo (paso 2): \"Minimum order ₹X\".",
+        "A4 — Límite agotado (paso 2): \"Coupon usage limit reached\" o \"Per-user limit reached\".",
+        "A5 — Sin productos elegibles (paso 2): el cupón está restringido a categorías o marcas que no hay en el carrito; \"No eligible items\".",
+        "A6 — Quitar cupón: el comprador pulsa Remove y el descuento vuelve a 0."
+      ],
+      "postcondicion": "el carrito guarda el código aplicado; se revalida al realizar el pedido (CU-05)."
+    },
+    {
+      "id": "CU-05",
+      "nombre": "Realizar pedido",
+      "actor": "Comprador",
+      "precondicion": "el comprador inició sesión y su carrito tiene al menos un producto.",
+      "flujo_principal": [
+        "El comprador pulsa Checkout y el sistema muestra los pasos Address, Delivery, Review y Pay.",
+        "El comprador elige una dirección guardada o ingresa una nueva, que queda guardada en su perfil.",
+        "Elige el envío: estándar (0) o express (99).",
+        "Revisa el resumen, acepta términos y política de privacidad y pulsa Place order.",
+        "El sistema descuenta la existencia de cada producto, revalida el cupón y calcula impuesto (5 % del subtotal con descuento) y total.",
+        "El sistema crea el pedido en estado pending con pago contra entrega, registra el evento \"Order placed\" en la bitácora y vacía el carrito.",
+        "El sistema envía el correo de confirmación y muestra el detalle del pedido."
+      ],
+      "flujos_alternos": [
+        "A1 — Sin dirección (paso 2): \"Select a saved address or add a complete shipping address.\"; la API responde \"Address required\".",
+        "A2 — Carrito vacío (paso 5): \"Cart is empty\".",
+        "A3 — Existencia insuficiente (paso 5): \"Not enough stock for <producto>\"; no se crea el pedido y no se descuenta existencia de ningún producto.",
+        "A4 — Términos sin aceptar (paso 4): \"Accept the terms and privacy policy to place your order.\"",
+        "A5 — Cupón ya no válido (paso 5): el pedido se crea sin descuento y el uso del cupón no se contabiliza."
+      ],
+      "postcondicion": "existe un pedido pending, la existencia de los productos bajó en la cantidad comprada y el carrito quedó vacío."
+    },
+    {
+      "id": "CU-06",
+      "nombre": "Actualizar estado de pedido",
+      "actor": "Administrador (en /admin/orders) o Vendedor (en /seller/orders)",
+      "precondicion": "el pedido existe; el administrador pasó el segundo factor; el vendedor está aprobado y todos los productos del pedido son suyos.",
+      "flujo_principal": [
+        "El actor abre el listado de pedidos y selecciona uno.",
+        "Elige el nuevo estado y, si quiere, escribe una nota.",
+        "El sistema valida que el estado exista y que la transición desde el estado actual sea permitida (ver RF-10).",
+        "El sistema guarda el estado y registra en la bitácora el estado anterior, el nuevo, quién lo cambió, su rol, la fecha y la IP.",
+        "Si el nuevo estado es delivered, envía el correo de entrega al comprador.",
+        "El comprador ve la línea de tiempo actualizada en /orders/\\[id\\]."
+      ],
+      "flujos_alternos": [
+        "A1 — Estado inexistente (paso 3): \"Invalid status\".",
+        "A2 — Mismo estado (paso 3): \"Order already <estado>\"; no se registra cambio.",
+        "A3 — Pedido con productos de otros vendedores (paso 3): \"Multi-seller order — admin only\".",
+        "A4 — Transición no permitida (paso 3): por ejemplo de delivered a pending o de cancelled a shipped; el sistema debe rechazarla sin modificar el pedido."
+      ],
+      "postcondicion": "el pedido tiene el nuevo estado y la bitácora conserva el historial completo."
+    },
+    {
+      "id": "CU-07",
+      "nombre": "Solicitar devolución",
+      "actor": "Comprador",
+      "precondicion": "el pedido es del comprador, está en estado delivered y no han pasado más de 7 días desde la entrega.",
+      "flujo_principal": [
+        "En /orders/\\[id\\], el comprador pulsa Request Return.",
+        "Selecciona los productos y la cantidad de cada uno, escribe motivo y nota y, opcionalmente, adjunta un archivo.",
+        "El sistema valida que cada producto pertenezca al pedido y que la cantidad no supere lo comprado menos lo que ya está en devoluciones activas.",
+        "El sistema crea la solicitud en estado requested con el precio pagado de cada producto."
+      ],
+      "flujos_alternos": [
+        "A1 — Pedido no entregado (paso 3): \"Order not delivered yet\".",
+        "A2 — Ventana vencida (paso 3): \"Return window expired\".",
+        "A3 — Cantidad excesiva (paso 3): \"Requested quantity exceeds available returnable quantity\".",
+        "A4 — Producto ajeno al pedido (paso 3): \"Product not in order\".",
+        "A5 — Sin productos seleccionados (paso 3): \"No items provided\"."
+      ],
+      "postcondicion": "existe una solicitud requested visible para el comprador y para el administrador."
+    },
+    {
+      "id": "CU-08",
+      "nombre": "Resolver devolución",
+      "actor": "Administrador",
+      "precondicion": "existe una solicitud de devolución abierta y el administrador tiene el permiso returns:write.",
+      "flujo_principal": [
+        "El administrador abre /admin/returns y revisa la solicitud.",
+        "La aprueba (approved) o la rechaza (rejected).",
+        "Cuando recibe el producto, la marca como received.",
+        "Registra el reembolso con método (manual, banco o UPI), referencia y monto, y la marca como refunded."
+      ],
+      "flujos_alternos": [
+        "A1 — Solicitud cerrada (paso 2): si está rejected o cancelled, \"Request already closed\".",
+        "A2 — Recepción sin aprobación (paso 3): \"Can only mark received after approval\".",
+        "A3 — Reembolso prematuro (paso 4): \"Can only refund after approval/received\"."
+      ],
+      "postcondicion": "la solicitud queda cerrada con su historial de fechas."
+    }
+  ],
+  "requerimientos": [
+    {
+      "id": "RF-01",
+      "tipo": "RF",
+      "nombre": "Validaciones del registro",
+      "descripcion": "El registro debe cumplir: (a) nombre, correo y contraseña son obligatorios; si falta uno responde \"All fields required\"; (b) el correo no debe estar registrado; si existe responde \"Email already used\"; (c) la contraseña tiene al menos 6 caracteres y la confirmación coincide, validado en la interfaz y en la API.",
+      "cu": "CU-01",
+      "prioridad": "Alta"
+    },
+    {
+      "id": "RF-02",
+      "tipo": "RF",
+      "nombre": "Rol permitido en el registro",
+      "descripcion": "El registro público solo asigna roles permitidos: (a) sin rol o con rol user, crea un comprador; (b) con rol seller, crea un vendedor pendiente de aprobación; (c) con cualquier otro rol (admin, subadmin, seller_assistant), lo ignora y crea un comprador.",
+      "cu": "CU-01",
+      "prioridad": "Alta"
+    },
+    {
+      "id": "RF-03",
+      "tipo": "RF",
+      "nombre": "Inicio de sesión",
+      "descripcion": "El inicio de sesión debe cumplir: (a) con credenciales válidas y cuenta activa emite un token de acceso de 15 minutos y un token de renovación de 30 días en cookie httpOnly; (b) con correo o contraseña incorrectos responde \"Invalid credentials\" sin indicar cuál dato falló; (c) con cuenta bloqueada responde 403 \"Account blocked\" y no emite tokens.",
+      "cu": "CU-02",
+      "prioridad": "Alta"
+    },
+    {
+      "id": "RF-04",
+      "tipo": "RF",
+      "nombre": "Segundo factor de administración",
+      "descripcion": "El segundo factor de administración debe cumplir: (a) admin y subadmin ingresan un código TOTP de 6 dígitos antes de recibir tokens; (b) la primera vez se enrolan escaneando un QR; (c) un código incorrecto responde \"Invalid code\"; (d) toda ruta /api/admin exige una sesión con segundo factor.",
+      "cu": "CU-02",
+      "prioridad": "Alta"
+    },
+    {
+      "id": "RF-05",
+      "tipo": "RF",
+      "nombre": "Carrito",
+      "descripcion": "El carrito debe cumplir: (a) solo acepta cantidades enteras mayores o iguales a 1; (b) la cantidad total de un producto en el carrito, al agregar o al modificar, no supera su existencia; si la supera responde \"Not enough stock\"; (c) agregar un producto que ya está en el carrito suma la cantidad; (d) el subtotal es la suma de precio al agregar × cantidad y se recalcula al modificar o eliminar líneas.",
+      "cu": "CU-03",
+      "prioridad": "Alta"
+    },
+    {
+      "id": "RF-06",
+      "tipo": "RF",
+      "nombre": "Validez del cupón",
+      "descripcion": "Un cupón solo se acepta si: (a) existe (\"Invalid code\"); (b) está activo (\"Coupon inactive\"); (c) la fecha actual está entre su inicio y su vencimiento (\"Coupon not in active window\"); (d) el subtotal alcanza el mínimo (\"Minimum order ₹X\"); (e) los usos totales no llegan al límite global (\"Coupon usage limit reached\"); (f) los usos del comprador no llegan al límite por usuario (\"Per-user limit reached\"); (g) hay al menos un producto elegible (\"No eligible items\").",
+      "cu": "CU-04",
+      "prioridad": "Alta"
+    },
+    {
+      "id": "RF-07",
+      "tipo": "RF",
+      "nombre": "Cálculo y alcance del descuento",
+      "descripcion": "El descuento se calcula así: (a) porcentual = redondeo(subtotal elegible × valor / 100), con tope en el descuento máximo del cupón; (b) fijo = valor del cupón; (c) en ambos casos nunca supera el subtotal elegible; (d) si el cupón está restringido a categorías o marcas, solo cuentan los productos que pertenecen a alguna de ellas; sin restricciones, cuenta todo el carrito.",
+      "cu": "CU-04",
+      "prioridad": "Alta"
+    },
+    {
+      "id": "RF-08",
+      "tipo": "RF",
+      "nombre": "Creación del pedido",
+      "descripcion": "Un pedido se crea así: (a) solo si el carrito no está vacío y hay dirección de envío, con pago contra entrega (COD) y estado inicial pending; (b) la existencia de todos los productos se descuenta de forma atómica: si uno no alcanza, no se crea el pedido ni cambia ninguna existencia; (c) el cupón se revalida con las reglas de RF-06; si es válido se guarda en el pedido y sus contadores de uso (global y del comprador) suben en 1; si no, el pedido se crea sin descuento; (d) el comprador solo puede consultar sus propios pedidos (403 en otro caso).",
+      "cu": "CU-05",
+      "prioridad": "Alta"
+    },
+    {
+      "id": "RF-09",
+      "tipo": "RF",
+      "nombre": "Totales del pedido",
+      "descripcion": "Los totales del pedido se calculan así: (a) envío estándar 0 y express 99; (b) impuesto = redondeo((subtotal − descuento) × 5 %); (c) total = subtotal − descuento + impuesto + envío.",
+      "cu": "CU-05",
+      "prioridad": "Alta"
+    },
+    {
+      "id": "RF-10",
+      "tipo": "RF",
+      "nombre": "Estados del pedido",
+      "descripcion": "Solo se permiten estas transiciones de estado de pedido: (a) pending → confirmed, confirmed → shipped, shipped → delivered, pending → cancelled y confirmed → cancelled; los estados delivered y cancelled son finales. Además: (b) cada cambio registra en la bitácora estado anterior, estado nuevo, usuario, rol, nota, IP y fecha, y el comprador puede consultarla; (c) al pasar a delivered se envía un correo al comprador; (d) un vendedor solo cambia pedidos cuyos productos son todos suyos (\"Multi-seller order — admin only\"); el administrador puede cambiar cualquiera.",
+      "cu": "CU-06",
+      "prioridad": "Alta"
+    },
+    {
+      "id": "RF-11",
+      "tipo": "RF",
+      "nombre": "Solicitud de devolución",
+      "descripcion": "Una solicitud de devolución solo se acepta si: (a) el pedido es del comprador, está en estado delivered y no han pasado más de 7 días desde la entrega; (b) cada producto pertenece al pedido; (c) la cantidad de cada producto es un entero entre 1 y la cantidad comprada menos la que ya está en devoluciones activas.",
+      "cu": "CU-07",
+      "prioridad": "Alta"
+    },
+    {
+      "id": "RF-12",
+      "tipo": "RF",
+      "nombre": "Estados de la devolución",
+      "descripcion": "La devolución solo puede cambiar de estado así: (a) requested → approved, rejected o cancelled; (b) approved → received, refunded o cancelled; (c) received → refunded; (d) rejected, cancelled y refunded son estados finales y no admiten cambios.",
+      "cu": "CU-08",
+      "prioridad": "Media"
+    },
+    {
+      "id": "RNF-01",
+      "tipo": "RNF",
+      "nombre": "Tiempo de respuesta del catálogo",
+      "caracteristica": "Eficiencia de desempeño — comportamiento temporal",
+      "descripcion": "El catálogo debe responder con rapidez bajo carga concurrente.",
+      "criterio": "GET /api/products?page=1&limit=12 y GET /api/products/:id: percentil 95 ≤ 2 s y promedio ≤ 1 s con rampa de 0 a 50 usuarios virtuales sostenida 5 min, en el ambiente desplegado y tras 1 min de calentamiento.",
+      "verificacion": "k6 (E14): http_req_duration, avg y p(95)",
+      "prioridad": "Alta"
+    },
+    {
+      "id": "RNF-02",
+      "tipo": "RNF",
+      "nombre": "Tiempo de inicio de sesión",
+      "caracteristica": "Eficiencia de desempeño — comportamiento temporal",
+      "descripcion": "El inicio de sesión debe llevar al usuario a la página principal sin espera perceptible.",
+      "criterio": "Desde que se pulsa Sign in hasta que carga la página principal: ≤ 3 s en al menos 9 de 10 intentos, con el servidor ya activo.",
+      "verificacion": "10 mediciones con la pestaña Network de DevTools sobre el ambiente desplegado",
+      "prioridad": "Alta"
+    },
+    {
+      "id": "RNF-03",
+      "tipo": "RNF",
+      "nombre": "Estabilidad bajo carga",
+      "caracteristica": "Fiabilidad — madurez; eficiencia de desempeño — capacidad",
+      "descripcion": "El sistema debe mantenerse estable bajo la carga de RNF-01.",
+      "criterio": "Durante la prueba de RNF-01: tasa de error (respuestas 5xx o de más de 10 s) < 1 % y throughput ≥ 20 solicitudes por segundo.",
+      "verificacion": "k6 (E14): http_req_failed y http_reqs/s",
+      "prioridad": "Alta"
+    },
+    {
+      "id": "RNF-04",
+      "tipo": "RNF",
+      "nombre": "Protección de contraseñas",
+      "caracteristica": "Seguridad — confidencialidad",
+      "descripcion": "Las contraseñas nunca deben almacenarse ni devolverse en texto plano.",
+      "criterio": "100 % de las contraseñas guardadas como hash bcrypt (prefijo $2b$, costo 10) y 0 respuestas de /api/auth y /api/users que incluyan el campo password.",
+      "verificacion": "Consulta en MongoDB Atlas a 5 usuarios de prueba y aserción en la colección de Postman",
+      "prioridad": "Alta"
+    },
+    {
+      "id": "RNF-05",
+      "tipo": "RNF",
+      "nombre": "Protección contra fuerza bruta",
+      "caracteristica": "Seguridad — autenticidad",
+      "descripcion": "El sistema debe frenar ataques de fuerza bruta al inicio de sesión y al registro.",
+      "criterio": "Con NODE_ENV=production: el 6.º intento de login con el mismo correo en 15 min responde 429 con encabezado Retry-After y bloquea ese correo 15 min; el 6.º registro desde la misma IP en 1 h responde 429.",
+      "verificacion": "6 solicitudes consecutivas en Postman/Newman desde una IP que no sea local (en local el límite se omite), revisando código y encabezado",
+      "prioridad": "Alta"
+    },
+    {
+      "id": "RNF-06",
+      "tipo": "RNF",
+      "nombre": "Control de acceso a administración",
+      "caracteristica": "Seguridad — confidencialidad",
+      "descripcion": "Solo los roles autorizados deben acceder a funciones de administración.",
+      "criterio": "100 % de las rutas /api/admin/* responden 401 sin token y 403 con token de user o seller; un token de acceso con más de 15 min responde 401.",
+      "verificacion": "Colección de Postman que recorre las rutas de administración con tres perfiles",
+      "prioridad": "Alta"
+    }
+  ],
+  "casos_de_prueba": [
+    {
+      "id": "CP-01",
+      "titulo": "Registro con datos válidos y contraseña de 6 caracteres",
+      "rf_detalle": "RF-01 (a, b, c), RF-02 (a)",
+      "requerimientos": [
+        "RF-01",
+        "RF-02"
+      ],
+      "tecnica": "PE, clase válida; VL, valor en el límite (6 caracteres)",
+      "prioridad": "Alta",
+      "precondiciones": "no existe una cuenta con el correo de prueba; no hay sesión iniciada.",
+      "datos": "nombre Prueba QA; correo pruebaqa@luxora.com; contraseña y confirmación Clave1.",
+      "pasos": [
+        "Abrir https://luxora-qa.vercel.app/auth/register.",
+        "Ingresar nombre, correo, contraseña y confirmación.",
+        "Marcar la aceptación de términos y política de privacidad.",
+        "Pulsar Register."
+      ],
+      "resultado_esperado": "la cuenta se crea, la sesión queda iniciada y se muestra la tienda. En Network, la respuesta de /api/auth/register tiene código 201 y user.role = \"user\".",
+      "tipo": "funcional",
+      "tecnica_corta": "PE + VL"
+    },
+    {
+      "id": "CP-02",
+      "titulo": "Registro con correo ya registrado",
+      "rf_detalle": "RF-01 (b)",
+      "requerimientos": [
+        "RF-01"
+      ],
+      "tecnica": "PE, clase inválida (correo existente)",
+      "prioridad": "Alta",
+      "precondiciones": "existe user@luxora.com (seed); no hay sesión iniciada.",
+      "datos": "nombre Cliente Duplicado; correo user@luxora.com; contraseña y confirmación Clave123.",
+      "pasos": [
+        "Abrir /auth/register.",
+        "Ingresar los datos, aceptar términos y pulsar Register."
+      ],
+      "resultado_esperado": "se muestra \"Email already used\" (400), no se crea otra cuenta y no se inicia sesión.",
+      "tipo": "funcional",
+      "tecnica_corta": "PE"
+    },
+    {
+      "id": "CP-03",
+      "titulo": "Registro por API con contraseña de 5 caracteres",
+      "rf_detalle": "RF-01 (c)",
+      "requerimientos": [
+        "RF-01"
+      ],
+      "tecnica": "VL, valor antes del límite (5 caracteres)",
+      "prioridad": "Alta",
+      "precondiciones": "no existe corta@luxora.com.",
+      "datos": "body JSON {\"name\": \"Prueba Corta\", \"email\": \"corta@luxora.com\", \"password\": \"Abc12\"}.",
+      "pasos": [
+        "API: enviar POST https://luxora-qa.vercel.app/api/auth/register con el body indicado.",
+        "API: enviar POST /api/auth/login con corta@luxora.com y Abc12."
+      ],
+      "resultado_esperado": "el registro responde 400 con un mensaje de longitud mínima (por ejemplo \"Password must be at least 6 characters\") y la cuenta no se crea; el login del paso 2 responde \"Invalid credentials\".",
+      "tipo": "funcional",
+      "tecnica_corta": "VL"
+    },
+    {
+      "id": "CP-04",
+      "titulo": "Registro por API enviando el rol admin",
+      "rf_detalle": "RF-02 (c)",
+      "requerimientos": [
+        "RF-02"
+      ],
+      "tecnica": "PE, clase inválida (rol no permitido)",
+      "prioridad": "Alta",
+      "precondiciones": "no existe roladmin@luxora.com.",
+      "datos": "body JSON {\"name\": \"Rol Admin\", \"email\": \"roladmin@luxora.com\", \"password\": \"Clave123\", \"role\": \"admin\"}.",
+      "pasos": [
+        "API: enviar POST /api/auth/register con el body indicado.",
+        "API: con el accessToken recibido, enviar GET /api/admin/users."
+      ],
+      "resultado_esperado": "el registro responde 201 con user.role = \"user\"; el paso 2 responde 403.",
+      "tipo": "funcional",
+      "tecnica_corta": "PE"
+    },
+    {
+      "id": "CP-05",
+      "titulo": "Login con credenciales correctas y cuenta activa",
+      "rf_detalle": "RF-03 (a)",
+      "requerimientos": [
+        "RF-03"
+      ],
+      "tecnica": "TD, regla R1",
+      "prioridad": "Alta",
+      "precondiciones": "user@luxora.com existe y está activo; no hay sesión iniciada.",
+      "datos": "user@luxora.com / password123.",
+      "pasos": [
+        "Abrir /auth/login.",
+        "Ingresar correo y contraseña y pulsar Sign in.",
+        "En DevTools, revisar la respuesta de /api/auth/login y la cookie rt en Application > Cookies."
+      ],
+      "resultado_esperado": "se inicia sesión y se muestra la tienda; la respuesta incluye accessToken y la cookie rt está marcada como HttpOnly.",
+      "tipo": "funcional",
+      "tecnica_corta": "TD (R1)"
+    },
+    {
+      "id": "CP-06",
+      "titulo": "Login con contraseña incorrecta",
+      "rf_detalle": "RF-03 (b)",
+      "requerimientos": [
+        "RF-03"
+      ],
+      "tecnica": "TD, regla R3",
+      "prioridad": "Alta",
+      "precondiciones": "user@luxora.com existe; no hay sesión iniciada.",
+      "datos": "user@luxora.com / Incorrecta1.",
+      "pasos": [
+        "Abrir /auth/login.",
+        "Ingresar correo y contraseña y pulsar Sign in."
+      ],
+      "resultado_esperado": "se muestra \"Invalid credentials\"; no se emite token y el usuario permanece en la pantalla de login.",
+      "tipo": "funcional",
+      "tecnica_corta": "TD (R3)"
+    },
+    {
+      "id": "CP-07",
+      "titulo": "Login de una cuenta bloqueada",
+      "rf_detalle": "RF-03 (c)",
+      "requerimientos": [
+        "RF-03"
+      ],
+      "tecnica": "TD, regla R2",
+      "prioridad": "Alta",
+      "precondiciones": "bloqueado@luxora.com se registró con Clave123 y el administrador cambió su estado a blocked en /admin/users.",
+      "datos": "bloqueado@luxora.com / Clave123.",
+      "pasos": [
+        "Abrir /auth/login.",
+        "Ingresar correo y contraseña y pulsar Sign in."
+      ],
+      "resultado_esperado": "la API responde 403 \"Account blocked\"; no se emite token ni se inicia sesión.",
+      "tipo": "funcional",
+      "tecnica_corta": "TD (R2)"
+    },
+    {
+      "id": "CP-08",
+      "titulo": "Segundo factor con código incorrecto",
+      "rf_detalle": "RF-04 (a, c)",
+      "requerimientos": [
+        "RF-04"
+      ],
+      "tecnica": "PE, clase inválida (código incorrecto)",
+      "prioridad": "Alta",
+      "precondiciones": "admin@luxora.com ya enroló su segundo factor en una app autenticadora.",
+      "datos": "admin@luxora.com / password123; código 000000 (verificar que no coincide con el que muestra la app).",
+      "pasos": [
+        "Abrir /auth/login e ingresar las credenciales del administrador.",
+        "En la pantalla del segundo factor, ingresar 000000 y confirmar."
+      ],
+      "resultado_esperado": "se muestra \"Invalid code\"; no se emiten tokens y no se puede abrir /admin.",
+      "tipo": "funcional",
+      "tecnica_corta": "PE"
+    },
+    {
+      "id": "CP-09",
+      "titulo": "Agregar al carrito con cantidad 0",
+      "rf_detalle": "RF-05 (a)",
+      "requerimientos": [
+        "RF-05"
+      ],
+      "tecnica": "VL, valor antes del límite mínimo (0)",
+      "prioridad": "Media",
+      "precondiciones": "sesión de user@luxora.com con carrito vacío; se conoce el id de Geometric Gold Pendant (GET /api/products).",
+      "datos": "body JSON {\"productId\": \"<id de Geometric Gold Pendant>\", \"qty\": 0}.",
+      "pasos": [
+        "API: enviar POST /api/cart con el body indicado.",
+        "API: enviar GET /api/cart."
+      ],
+      "resultado_esperado": "el paso 1 responde 400 con un mensaje de cantidad inválida; el carrito del paso 2 sigue vacío.",
+      "tipo": "funcional",
+      "tecnica_corta": "VL"
+    },
+    {
+      "id": "CP-10",
+      "titulo": "Agregar una cantidad igual a la existencia",
+      "rf_detalle": "RF-05 (b, d)",
+      "requerimientos": [
+        "RF-05"
+      ],
+      "tecnica": "VL, valor en el límite (existencia = 5)",
+      "prioridad": "Media",
+      "precondiciones": "sesión de user@luxora.com con carrito vacío; Geometric Gold Pendant tiene existencia 5.",
+      "datos": "Geometric Gold Pendant, precio 8 900.",
+      "pasos": [
+        "Abrir el detalle de Geometric Gold Pendant y pulsar Add to cart.",
+        "Abrir /cart y pulsar \"+\" hasta que la cantidad sea 5."
+      ],
+      "resultado_esperado": "la cantidad llega a 5 sin error y el subtotal es 44 500.",
+      "tipo": "funcional",
+      "tecnica_corta": "VL"
+    },
+    {
+      "id": "CP-11",
+      "titulo": "Agregar una cantidad mayor a la existencia",
+      "rf_detalle": "RF-05 (b)",
+      "requerimientos": [
+        "RF-05"
+      ],
+      "tecnica": "VL, valor después del límite (existencia + 1 = 6)",
+      "prioridad": "Alta",
+      "precondiciones": "el carrito tiene 5 Geometric Gold Pendant (resultado de CP-10).",
+      "datos": "cantidad 6.",
+      "pasos": [
+        "En /cart, pulsar \"+\" una vez sobre Geometric Gold Pendant."
+      ],
+      "resultado_esperado": "se muestra \"Not enough stock\"; la cantidad sigue en 5 y el subtotal en 44 500.",
+      "tipo": "funcional",
+      "tecnica_corta": "VL"
+    },
+    {
+      "id": "CP-12",
+      "titulo": "Agregar unidades que superan la existencia acumulada",
+      "rf_detalle": "RF-05 (b, c)",
+      "requerimientos": [
+        "RF-05"
+      ],
+      "tecnica": "VL, valor después del límite en la suma (5 + 1)",
+      "prioridad": "Alta",
+      "precondiciones": "el carrito tiene 5 Geometric Gold Pendant, igual a su existencia.",
+      "datos": "1 unidad adicional desde el detalle del producto.",
+      "pasos": [
+        "Abrir el detalle de Geometric Gold Pendant y pulsar Add to cart.",
+        "Abrir /cart."
+      ],
+      "resultado_esperado": "se muestra \"Not enough stock\"; el carrito sigue con 5 unidades.",
+      "tipo": "funcional",
+      "tecnica_corta": "VL"
+    },
+    {
+      "id": "CP-13",
+      "titulo": "Cupón válido con subtotal igual al mínimo",
+      "rf_detalle": "RF-06 (a a g)",
+      "requerimientos": [
+        "RF-06"
+      ],
+      "tecnica": "TD, regla R1; VL, valor en el límite (subtotal = mínimo)",
+      "prioridad": "Alta",
+      "precondiciones": "cupón MIN2100 creado (fijo 200, mínimo 2 100); el carrito tiene solo 1 Midnight Leather Briefcase (subtotal 2 100).",
+      "datos": "código MIN2100.",
+      "pasos": [
+        "Abrir /cart.",
+        "Escribir MIN2100 en el campo de cupón y aplicarlo."
+      ],
+      "resultado_esperado": "el cupón se acepta; descuento 200 y subtotal con descuento 1 900.",
+      "tipo": "funcional",
+      "tecnica_corta": "TD (R1) + VL"
+    },
+    {
+      "id": "CP-14",
+      "titulo": "Cupón con subtotal un valor por debajo del mínimo",
+      "rf_detalle": "RF-06 (d)",
+      "requerimientos": [
+        "RF-06"
+      ],
+      "tecnica": "VL, valor antes del límite (subtotal = mínimo − 1)",
+      "prioridad": "Media",
+      "precondiciones": "cupón MIN2101 creado (fijo 200, mínimo 2 101); el carrito tiene solo 1 Midnight Leather Briefcase (subtotal 2 100) y ningún cupón aplicado.",
+      "datos": "código MIN2101.",
+      "pasos": [
+        "Abrir /cart.",
+        "Escribir MIN2101 y aplicarlo."
+      ],
+      "resultado_esperado": "se muestra \"Minimum order ₹2101\"; no se aplica descuento.",
+      "tipo": "funcional",
+      "tecnica_corta": "VL"
+    },
+    {
+      "id": "CP-15",
+      "titulo": "Cupón vencido",
+      "rf_detalle": "RF-06 (c)",
+      "requerimientos": [
+        "RF-06"
+      ],
+      "tecnica": "TD, regla R4",
+      "prioridad": "Media",
+      "precondiciones": "cupón VENCIDO creado con vencimiento el día anterior; el carrito tiene 1 Midnight Leather Briefcase y ningún cupón aplicado.",
+      "datos": "código VENCIDO.",
+      "pasos": [
+        "Abrir /cart.",
+        "Escribir VENCIDO y aplicarlo."
+      ],
+      "resultado_esperado": "se muestra \"Coupon not in active window\"; no se aplica descuento.",
+      "tipo": "funcional",
+      "tecnica_corta": "TD (R4)"
+    },
+    {
+      "id": "CP-16",
+      "titulo": "Cupón con el límite por usuario alcanzado",
+      "rf_detalle": "RF-06 (f)",
+      "requerimientos": [
+        "RF-06"
+      ],
+      "tecnica": "TD, regla R7",
+      "prioridad": "Media",
+      "precondiciones": "cupón UNOXCLIENTE creado (fijo 50, límite por usuario 1); user@luxora.com ya confirmó un pedido usando UNOXCLIENTE; el carrito tiene 1 Midnight Leather Briefcase y ningún cupón aplicado.",
+      "datos": "código UNOXCLIENTE.",
+      "pasos": [
+        "Abrir /cart.",
+        "Escribir UNOXCLIENTE y aplicarlo."
+      ],
+      "resultado_esperado": "se muestra \"Per-user limit reached\"; no se aplica descuento.",
+      "tipo": "funcional",
+      "tecnica_corta": "TD (R7)"
+    },
+    {
+      "id": "CP-17",
+      "titulo": "Descuento porcentual que supera el tope",
+      "rf_detalle": "RF-07 (a)",
+      "requerimientos": [
+        "RF-07"
+      ],
+      "tecnica": "VL, descuento calculado por encima del tope",
+      "prioridad": "Media",
+      "precondiciones": "cupón PCT10TOPE creado (10 %, descuento máximo 1 000); el carrito tiene solo 1 Obsidian Chronograph X1 (subtotal 12 500).",
+      "datos": "código PCT10TOPE; 10 % de 12 500 = 1 250.",
+      "pasos": [
+        "Abrir /cart.",
+        "Escribir PCT10TOPE y aplicarlo."
+      ],
+      "resultado_esperado": "el descuento es 1 000 (no 1 250) y el subtotal con descuento es 11 500.",
+      "tipo": "funcional",
+      "tecnica_corta": "VL"
+    },
+    {
+      "id": "CP-18",
+      "titulo": "Cupón restringido a una categoría",
+      "rf_detalle": "RF-07 (d)",
+      "requerimientos": [
+        "RF-07"
+      ],
+      "tecnica": "PE, un representante de la clase elegible y otro de la no elegible",
+      "prioridad": "Media",
+      "precondiciones": "cupón RELOJES15 creado (15 %, categoría permitida Watches); el carrito tiene 1 Obsidian Chronograph X1 (Watches, 12 500) y 1 Titanium Cuff Links (Accessories, 450).",
+      "datos": "código RELOJES15; subtotal 12 950; 15 % de 12 500 = 1 875.",
+      "pasos": [
+        "Abrir /cart.",
+        "Escribir RELOJES15 y aplicarlo."
+      ],
+      "resultado_esperado": "el descuento es 1 875, calculado solo sobre el reloj, y el subtotal con descuento es 11 075.",
+      "tipo": "funcional",
+      "tecnica_corta": "PE"
+    },
+    {
+      "id": "CP-19",
+      "titulo": "Pedido con envío express y cupón fijo",
+      "rf_detalle": "RF-08 (a), RF-09 (a, b, c)",
+      "requerimientos": [
+        "RF-08",
+        "RF-09"
+      ],
+      "tecnica": "PE, clase válida del carrito y clase express del envío",
+      "prioridad": "Alta",
+      "precondiciones": "cupón FIJO100 creado (fijo 100, 0 usos); el carrito tiene 2 Titanium Cuff Links (subtotal 900) con FIJO100 aplicado; se anota la existencia actual de Titanium Cuff Links (42 tras el seed).",
+      "datos": "dirección Calle 1 10-20, Zona 1, Guatemala, 01001, Guatemala, teléfono 5555-5555; envío express. Cálculo esperado: 900 − 100 = 800; impuesto 5 % = 40; envío 99; total 939.",
+      "pasos": [
+        "En /cart, pulsar Continue to checkout.",
+        "Ingresar la dirección, elegir envío express, aceptar términos y pulsar Place order.",
+        "Abrir el detalle del pedido y /admin/coupons (como administrador)."
+      ],
+      "resultado_esperado": "se crea un pedido pending, pago COD, con subtotal 900, descuento 100, impuesto 40, envío 99 y total 939; la existencia de Titanium Cuff Links baja en 2; el carrito queda vacío; FIJO100 pasa a 1 uso.",
+      "tipo": "funcional",
+      "tecnica_corta": "PE"
+    },
+    {
+      "id": "CP-20",
+      "titulo": "Pedido con un producto sin existencia suficiente",
+      "rf_detalle": "RF-08 (b)",
+      "requerimientos": [
+        "RF-08"
+      ],
+      "tecnica": "PE, clase inválida (existencia insuficiente)",
+      "prioridad": "Alta",
+      "precondiciones": "el carrito tiene 1 Titanium Cuff Links y 3 Skeleton Automatic Watch, en ese orden; después, el vendedor cambia la existencia de Skeleton Automatic Watch a 2 en /seller/products; se anota la existencia de Titanium Cuff Links.",
+      "datos": "dirección de CP-19; envío standard.",
+      "pasos": [
+        "Ir a checkout, ingresar la dirección, elegir envío standard, aceptar términos y pulsar Place order.",
+        "Revisar /orders, la existencia de ambos productos y /cart."
+      ],
+      "resultado_esperado": "se muestra \"Not enough stock for Skeleton Automatic Watch\"; no se crea el pedido; la existencia de Titanium Cuff Links no cambia y la de Skeleton sigue en 2; el carrito conserva sus productos.",
+      "tipo": "funcional",
+      "tecnica_corta": "PE"
+    },
+    {
+      "id": "CP-21",
+      "titulo": "Pedido con un cupón cuyo límite global cambió a 0",
+      "rf_detalle": "RF-08 (c), RF-06 (e)",
+      "requerimientos": [
+        "RF-06",
+        "RF-08"
+      ],
+      "tecnica": "VL, límite global en 0",
+      "prioridad": "Alta",
+      "precondiciones": "cupón LIMITE0 creado (fijo 100, límite global 5, 0 usos); el carrito tiene 1 Titanium Cuff Links (450) con LIMITE0 aplicado; después, el administrador edita LIMITE0 y pone el límite global en 0.",
+      "datos": "body JSON {\"address\": \"Calle 1 10-20, Zona 1, Guatemala\", \"shippingMethod\": \"standard\"}. Cálculo esperado sin descuento: 450 + impuesto 23 (22.5 redondeado) + envío 0 = 473.",
+      "pasos": [
+        "API: con el token de user@luxora.com, enviar POST /api/orders con el body indicado.",
+        "Revisar el pedido creado y LIMITE0 en /admin/coupons."
+      ],
+      "resultado_esperado": "el pedido se crea sin descuento (sin appliedCoupon), con total 473; LIMITE0 sigue con 0 usos.",
+      "tipo": "funcional",
+      "tecnica_corta": "VL"
+    },
+    {
+      "id": "CP-22",
+      "titulo": "Ciclo completo del pedido hasta delivered",
+      "rf_detalle": "RF-10 (a, b)",
+      "requerimientos": [
+        "RF-10"
+      ],
+      "tecnica": "TE, secuencia larga de transiciones válidas",
+      "prioridad": "Alta",
+      "precondiciones": "existe un pedido pending de user@luxora.com con 2 Titanium Cuff Links (por ejemplo, el de CP-19); el administrador inició sesión con segundo factor.",
+      "datos": "estados confirmed, shipped y delivered, en ese orden.",
+      "pasos": [
+        "En /admin/orders, cambiar el pedido a confirmed y confirmar.",
+        "Cambiarlo a shipped y confirmar.",
+        "Cambiarlo a delivered y confirmar.",
+        "Como user@luxora.com, abrir el detalle del pedido y su línea de tiempo."
+      ],
+      "resultado_esperado": "los tres cambios se aceptan; el pedido queda delivered; la bitácora muestra 4 registros (creado, confirmed, shipped, delivered) con estado anterior, estado nuevo, usuario, rol y fecha. El correo de entrega no se verifica porque EMAIL_DISABLED=true.",
+      "tipo": "funcional",
+      "tecnica_corta": "TE"
+    },
+    {
+      "id": "CP-23",
+      "titulo": "Pedido delivered regresado a pending",
+      "rf_detalle": "RF-10 (a)",
+      "requerimientos": [
+        "RF-10"
+      ],
+      "tecnica": "TE, transición inválida desde estado final",
+      "prioridad": "Alta",
+      "precondiciones": "existe un pedido en estado delivered; el administrador inició sesión con segundo factor.",
+      "datos": "nuevo estado pending.",
+      "pasos": [
+        "En /admin/orders, cambiar el pedido delivered a pending y confirmar.",
+        "Revisar el estado y la bitácora del pedido."
+      ],
+      "resultado_esperado": "el cambio se rechaza con un mensaje de transición no permitida; el pedido sigue delivered y la bitácora no agrega registros.",
+      "tipo": "funcional",
+      "tecnica_corta": "TE"
+    },
+    {
+      "id": "CP-24",
+      "titulo": "Cancelar un pedido y luego marcarlo shipped",
+      "rf_detalle": "RF-10 (a)",
+      "requerimientos": [
+        "RF-10"
+      ],
+      "tecnica": "TE, transición válida pending → cancelled seguida de una inválida desde estado final",
+      "prioridad": "Alta",
+      "precondiciones": "existe un pedido pending nuevo de user@luxora.com; el administrador inició sesión con segundo factor.",
+      "datos": "estados cancelled y luego shipped.",
+      "pasos": [
+        "En /admin/orders, cambiar el pedido a cancelled y confirmar.",
+        "Cambiar el mismo pedido a shipped y confirmar."
+      ],
+      "resultado_esperado": "el paso 1 se acepta; el paso 2 se rechaza y el pedido sigue cancelled.",
+      "tipo": "funcional",
+      "tecnica_corta": "TE"
+    },
+    {
+      "id": "CP-25",
+      "titulo": "Pedido pending marcado directamente como delivered",
+      "rf_detalle": "RF-10 (a)",
+      "requerimientos": [
+        "RF-10"
+      ],
+      "tecnica": "TE, transición inválida (salto de estados)",
+      "prioridad": "Alta",
+      "precondiciones": "existe un pedido pending nuevo de user@luxora.com; el administrador inició sesión con segundo factor.",
+      "datos": "nuevo estado delivered.",
+      "pasos": [
+        "En /admin/orders, cambiar el pedido pending a delivered y confirmar."
+      ],
+      "resultado_esperado": "el cambio se rechaza; el pedido sigue pending.",
+      "tipo": "funcional",
+      "tecnica_corta": "TE"
+    },
+    {
+      "id": "CP-26",
+      "titulo": "Devolución de todas las unidades de un pedido entregado",
+      "rf_detalle": "RF-11 (a, b, c)",
+      "requerimientos": [
+        "RF-11"
+      ],
+      "tecnica": "TD, regla R1; VL, cantidad en el límite (2 de 2)",
+      "prioridad": "Alta",
+      "precondiciones": "user@luxora.com tiene un pedido con 2 Titanium Cuff Links que pasó a delivered hoy siguiendo la secuencia válida de CP-22 y sin devoluciones previas.",
+      "datos": "producto Titanium Cuff Links, cantidad 2, motivo \"Producto dañado\".",
+      "pasos": [
+        "Abrir el detalle del pedido y pulsar Request Return.",
+        "Seleccionar Titanium Cuff Links con cantidad 2, escribir el motivo y enviar."
+      ],
+      "resultado_esperado": "se crea una solicitud requested con 2 unidades a precio 450; aparece en el pedido y en /admin/returns.",
+      "tipo": "funcional",
+      "tecnica_corta": "TD (R1) + VL"
+    },
+    {
+      "id": "CP-27",
+      "titulo": "Devolución de un pedido pending",
+      "rf_detalle": "RF-11 (a)",
+      "requerimientos": [
+        "RF-11"
+      ],
+      "tecnica": "TD, regla R2",
+      "prioridad": "Alta",
+      "precondiciones": "user@luxora.com tiene un pedido pending con 1 Titanium Cuff Links; se conocen el id del pedido y del producto.",
+      "datos": "body JSON {\"items\": \\[{\"product\": \"<id de Titanium Cuff Links>\", \"qty\": 1}\\], \"reason\": \"Prueba\"}.",
+      "pasos": [
+        "API: con el token del comprador, enviar POST /api/orders/<id del pedido>/returns con el body indicado.",
+        "API: enviar GET /api/orders/<id del pedido>/returns."
+      ],
+      "resultado_esperado": "el paso 1 responde 400 \"Order not delivered yet\"; el paso 2 devuelve una lista vacía.",
+      "tipo": "funcional",
+      "tecnica_corta": "TD (R2)"
+    },
+    {
+      "id": "CP-28",
+      "titulo": "Devolución de más unidades que las compradas",
+      "rf_detalle": "RF-11 (c)",
+      "requerimientos": [
+        "RF-11"
+      ],
+      "tecnica": "VL, cantidad después del límite (3 de 2)",
+      "prioridad": "Media",
+      "precondiciones": "user@luxora.com tiene otro pedido delivered hoy con 2 Titanium Cuff Links y sin devoluciones.",
+      "datos": "body JSON {\"items\": \\[{\"product\": \"<id de Titanium Cuff Links>\", \"qty\": 3}\\], \"reason\": \"Prueba\"}.",
+      "pasos": [
+        "API: enviar POST /api/orders/<id del pedido>/returns con el body indicado."
+      ],
+      "resultado_esperado": "responde 400 \"Requested quantity exceeds available returnable quantity\" y no se crea la solicitud.",
+      "tipo": "funcional",
+      "tecnica_corta": "VL"
+    },
+    {
+      "id": "CP-29",
+      "titulo": "Ciclo completo de la devolución hasta refunded",
+      "rf_detalle": "RF-12 (a, b, c)",
+      "requerimientos": [
+        "RF-12"
+      ],
+      "tecnica": "TE, secuencia larga de transiciones válidas",
+      "prioridad": "Alta",
+      "precondiciones": "existe la solicitud requested de CP-26; el administrador inició sesión con segundo factor.",
+      "datos": "reembolso con método manual, referencia REF-001 y monto 900.",
+      "pasos": [
+        "En /admin/returns, aprobar la solicitud.",
+        "Marcarla como received.",
+        "Marcarla como refunded con los datos del reembolso."
+      ],
+      "resultado_esperado": "los tres cambios se aceptan; la solicitud queda refunded con fechas de aprobación, recepción y reembolso registradas.",
+      "tipo": "funcional",
+      "tecnica_corta": "TE"
+    },
+    {
+      "id": "CP-30",
+      "titulo": "Devolución refunded regresada a approved",
+      "rf_detalle": "RF-12 (d)",
+      "requerimientos": [
+        "RF-12"
+      ],
+      "tecnica": "TE, transición inválida desde estado final",
+      "prioridad": "Alta",
+      "precondiciones": "existe la solicitud refunded de CP-29; se tiene el token del administrador obtenido tras el segundo factor.",
+      "datos": "body JSON {\"status\": \"approved\"}.",
+      "pasos": [
+        "API: enviar PATCH /api/admin/returns/<id de la solicitud>/status con el body indicado.",
+        "Revisar la solicitud en /admin/returns."
+      ],
+      "resultado_esperado": "responde 400 \"Request already closed\"; la solicitud sigue refunded.",
+      "tipo": "funcional",
+      "tecnica_corta": "TE"
+    },
+    {
+      "id": "PNF-01",
+      "titulo": "Verificación de tiempo de respuesta del catálogo",
+      "requerimientos": [
+        "RNF-01"
+      ],
+      "rf_detalle": "RNF-01",
+      "tecnica": "Prueba no funcional (método de 1.5)",
+      "tecnica_corta": "NF",
+      "prioridad": "Alta",
+      "precondiciones": "Se ejecuta en: Fase 2 (E14).",
+      "datos": "Según el método de verificación de RNF-01.",
+      "pasos": [
+        "k6 contra GET /api/products y GET /api/products/:id, rampa de 0 a 50 usuarios virtuales sostenida 5 min"
+      ],
+      "resultado_esperado": "Percentil 95 ≤ 2 s y promedio ≤ 1 s",
+      "tipo": "no funcional"
+    },
+    {
+      "id": "PNF-02",
+      "titulo": "Verificación de tiempo de inicio de sesión",
+      "requerimientos": [
+        "RNF-02"
+      ],
+      "rf_detalle": "RNF-02",
+      "tecnica": "Prueba no funcional (método de 1.5)",
+      "tecnica_corta": "NF",
+      "prioridad": "Alta",
+      "precondiciones": "Se ejecuta en: Fase 1, tras el E6.",
+      "datos": "Según el método de verificación de RNF-02.",
+      "pasos": [
+        "10 inicios de sesión en el ambiente desplegado, medidos con la pestaña Network de DevTools"
+      ],
+      "resultado_esperado": "≤ 3 s en al menos 9 de 10",
+      "tipo": "no funcional"
+    },
+    {
+      "id": "PNF-03",
+      "titulo": "Verificación de estabilidad bajo carga",
+      "requerimientos": [
+        "RNF-03"
+      ],
+      "rf_detalle": "RNF-03",
+      "tecnica": "Prueba no funcional (método de 1.5)",
+      "tecnica_corta": "NF",
+      "prioridad": "Alta",
+      "precondiciones": "Se ejecuta en: Fase 2 (E14).",
+      "datos": "Según el método de verificación de RNF-03.",
+      "pasos": [
+        "Métricas de la misma corrida de PNF-01"
+      ],
+      "resultado_esperado": "Tasa de error < 1 % y throughput ≥ 20 solicitudes/s",
+      "tipo": "no funcional"
+    },
+    {
+      "id": "PNF-04",
+      "titulo": "Verificación de protección de contraseñas",
+      "requerimientos": [
+        "RNF-04"
+      ],
+      "rf_detalle": "RNF-04",
+      "tecnica": "Prueba no funcional (método de 1.5)",
+      "tecnica_corta": "NF",
+      "prioridad": "Alta",
+      "precondiciones": "Se ejecuta en: Fase 1.",
+      "datos": "Según el método de verificación de RNF-04.",
+      "pasos": [
+        "Revisar 5 usuarios en MongoDB Atlas y las respuestas de /api/auth/register, /api/auth/login y /api/auth/me"
+      ],
+      "resultado_esperado": "Contraseñas con prefijo $2b$10$; ninguna respuesta incluye password",
+      "tipo": "no funcional"
+    },
+    {
+      "id": "PNF-05",
+      "titulo": "Verificación de protección contra fuerza bruta",
+      "requerimientos": [
+        "RNF-05"
+      ],
+      "rf_detalle": "RNF-05",
+      "tecnica": "Prueba no funcional (método de 1.5)",
+      "tecnica_corta": "NF",
+      "prioridad": "Alta",
+      "precondiciones": "Se ejecuta en: Fase 1, tras el E6.",
+      "datos": "Según el método de verificación de RNF-05.",
+      "pasos": [
+        "6 intentos de login seguidos con el mismo correo en el ambiente desplegado (NODE_ENV=production)"
+      ],
+      "resultado_esperado": "El 6.º responde 429 con encabezado Retry-After",
+      "tipo": "no funcional"
+    },
+    {
+      "id": "PNF-06",
+      "titulo": "Verificación de control de acceso a administración",
+      "requerimientos": [
+        "RNF-06"
+      ],
+      "rf_detalle": "RNF-06",
+      "tecnica": "Prueba no funcional (método de 1.5)",
+      "tecnica_corta": "NF",
+      "prioridad": "Alta",
+      "precondiciones": "Se ejecuta en: Fase 1.",
+      "datos": "Según el método de verificación de RNF-06.",
+      "pasos": [
+        "Llamar a las rutas GET de /api/admin sin token, con token de comprador y con token de vendedor"
+      ],
+      "resultado_esperado": "401 sin token y 403 con los dos perfiles en todas las rutas",
+      "tipo": "no funcional"
+    }
+  ]
+}
