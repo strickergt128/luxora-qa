@@ -1,0 +1,1406 @@
+{
+  "info": {
+    "name": "Luxora API — Pruebas de API (E11)",
+    "description": "Pruebas de API con aserciones de código, esquema y contenido. Ejecutar sobre una base recién sembrada (npm run seed).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "01 Salud y catálogo",
+      "description": "Disponibilidad de la API y datos del catálogo usados por el flujo.",
+      "item": [
+        {
+          "name": "Salud de la API",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "health"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Esquema de salud\", () => pm.response.to.have.jsonSchema({",
+                  "  type: \"object\", required: [\"status\", \"message\"],",
+                  "  properties: { status: { type: \"string\" }, message: { type: \"string\" } }",
+                  "}));",
+                  "pm.test(\"La API reporta estado ok\", () => pm.expect(pm.response.json().status).to.eql(\"ok\"));",
+                  "pm.test(\"Responde en menos de 2 s\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar productos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products?limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Esquema del catálogo\", () => pm.response.to.have.jsonSchema({",
+                  "  type: \"object\", required: [\"items\"],",
+                  "  properties: { items: { type: \"array\", minItems: 1, items: {",
+                  "    type: \"object\", required: [\"_id\", \"title\", \"price\", \"stock\"],",
+                  "    properties: { _id: { type: \"string\" }, title: { type: \"string\" }, price: { type: \"number\", minimum: 0 }, stock: { type: \"number\", minimum: 0 } }",
+                  "  } } }",
+                  "}));",
+                  "const items = pm.response.json().items;",
+                  "const buscar = (t) => items.find((p) => p.title === t);",
+                  "pm.test(\"Incluye los productos del seed usados en el flujo\", () => {",
+                  "  pm.expect(buscar(\"Midnight Leather Briefcase\"), \"maletín\").to.be.an(\"object\");",
+                  "  pm.expect(buscar(\"Geometric Gold Pendant\"), \"dije\").to.be.an(\"object\");",
+                  "});",
+                  "pm.collectionVariables.set(\"maletinId\", buscar(\"Midnight Leather Briefcase\")._id);",
+                  "pm.collectionVariables.set(\"dijeId\", buscar(\"Geometric Gold Pendant\")._id);",
+                  "pm.collectionVariables.set(\"dijeStock\", buscar(\"Geometric Gold Pendant\").stock);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Detalle de producto",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{maletinId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "{{maletinId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código 200\", () => pm.response.to.have.status(200));",
+                  "const p = pm.response.json().product || pm.response.json();",
+                  "pm.test(\"Esquema del producto\", () => pm.expect(p).to.include.keys(\"_id\", \"title\", \"price\", \"stock\"));",
+                  "pm.test(\"Es el maletín con precio 2 100\", () => {",
+                  "  pm.expect(p._id).to.eql(pm.collectionVariables.get(\"maletinId\"));",
+                  "  pm.expect(p.price).to.eql(2100);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 Registro, sesión y acceso (RF-01 a RF-03, RNF-04, RNF-06)",
+      "description": "",
+      "item": [
+        {
+          "name": "Registrar comprador",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Comprador Postman\",\n  \"email\": \"{{compradorEmail}}\",\n  \"password\": \"{{compradorPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const correo = \"comprador.\" + Date.now() + \"@luxora.test\";",
+                  "pm.collectionVariables.set(\"compradorEmail\", correo);",
+                  "pm.collectionVariables.set(\"compradorPassword\", \"Clave123\");"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Esquema de sesión\", () => pm.response.to.have.jsonSchema({",
+                  "  type: \"object\", required: [\"accessToken\", \"user\"],",
+                  "  properties: { accessToken: { type: \"string\", minLength: 20 },",
+                  "    user: { type: \"object\", required: [\"_id\", \"email\", \"role\"], properties: { role: { enum: [\"user\"] } } } }",
+                  "}));",
+                  "const b = pm.response.json();",
+                  "pm.test(\"No devuelve la contraseña (RNF-04)\", () => pm.expect(b.user).to.not.have.property(\"password\"));",
+                  "pm.test(\"Entrega la cookie de renovación httpOnly\", () => pm.expect(pm.cookies.has(\"rt\")).to.be.true);",
+                  "pm.test(\"El correo coincide\", () => pm.expect(b.user.email).to.eql(pm.collectionVariables.get(\"compradorEmail\")));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registrar con un correo ya usado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Duplicado\",\n  \"email\": \"{{compradorEmail}}\",\n  \"password\": \"Clave123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Esquema de error\", () => pm.response.to.have.jsonSchema({ type: \"object\", required: [\"message\"], properties: { message: { type: \"string\" } } }));",
+                  "pm.test(\"Mensaje: correo ya usado\", () => pm.expect(pm.response.json().message).to.eql(\"Email already used\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registrar enviando el rol admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Rol Admin\",\n  \"email\": \"roladmin.{{$timestamp}}@luxora.test\",\n  \"password\": \"Clave123\",\n  \"role\": \"admin\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Esquema de sesión\", () => pm.response.to.have.jsonSchema({ type: \"object\", required: [\"accessToken\", \"user\"] }));",
+                  "pm.test(\"Se crea como comprador, no como admin (RF-02)\", () => pm.expect(pm.response.json().user.role).to.eql(\"user\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login con contraseña incorrecta",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{compradorEmail}}\",\n  \"password\": \"Incorrecta1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Esquema de error\", () => pm.response.to.have.jsonSchema({ type: \"object\", required: [\"message\"] }));",
+                  "pm.test(\"Mensaje genérico de credenciales\", () => pm.expect(pm.response.json().message).to.eql(\"Invalid credentials\"));",
+                  "pm.test(\"No entrega token\", () => pm.expect(pm.response.json()).to.not.have.property(\"accessToken\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login del comprador",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{compradorEmail}}\",\n  \"password\": \"{{compradorPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Esquema de sesión\", () => pm.response.to.have.jsonSchema({",
+                  "  type: \"object\", required: [\"accessToken\", \"user\"],",
+                  "  properties: { accessToken: { type: \"string\" }, user: { type: \"object\", required: [\"_id\", \"role\"] } }",
+                  "}));",
+                  "pm.test(\"Rol comprador\", () => pm.expect(pm.response.json().user.role).to.eql(\"user\"));",
+                  "pm.collectionVariables.set(\"compradorToken\", pm.response.json().accessToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Perfil del comprador",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{compradorToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "me"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Esquema del perfil\", () => pm.response.to.have.jsonSchema({ type: \"object\", required: [\"_id\", \"email\", \"role\"] }));",
+                  "pm.test(\"Es el comprador registrado y sin contraseña\", () => {",
+                  "  const u = pm.response.json();",
+                  "  pm.expect(u.email).to.eql(pm.collectionVariables.get(\"compradorEmail\"));",
+                  "  pm.expect(u).to.not.have.property(\"password\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Carrito sin token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cart",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cart"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Esquema de error\", () => pm.response.to.have.jsonSchema({ type: \"object\", required: [\"message\"] }));",
+                  "pm.test(\"Mensaje: sin token\", () => pm.expect(pm.response.json().message).to.eql(\"No token\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ruta de administración con token de comprador",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{compradorToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código 403 (RNF-06)\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"Esquema de error\", () => pm.response.to.have.jsonSchema({ type: \"object\", required: [\"message\"] }));",
+                  "pm.test(\"Mensaje: solo administración\", () => pm.expect(pm.response.json().message).to.eql(\"Admin only\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 Administración con segundo factor (RF-04)",
+      "description": "Requiere una base recién sembrada: el admin del seed aún no tiene 2FA y se enrola aquí.",
+      "item": [
+        {
+          "name": "Login del admin pide enrolar 2FA",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Esquema del reto\", () => pm.response.to.have.jsonSchema({",
+                  "  type: \"object\", required: [\"twoFAEnrollRequired\", \"challenge\"],",
+                  "  properties: { twoFAEnrollRequired: { const: true }, challenge: { type: \"string\" } }",
+                  "}));",
+                  "pm.test(\"No entrega token de acceso sin segundo factor\", () => pm.expect(pm.response.json()).to.not.have.property(\"accessToken\"));",
+                  "pm.collectionVariables.set(\"adminChallenge\", pm.response.json().challenge);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Iniciar enrolamiento 2FA",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/admin-2fa/enroll-init",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "admin-2fa",
+                "enroll-init"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"challenge\": \"{{adminChallenge}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Esquema del enrolamiento\", () => pm.response.to.have.jsonSchema({",
+                  "  type: \"object\", required: [\"challenge\", \"secretBase32\", \"otpauthUrl\"],",
+                  "  properties: { secretBase32: { type: \"string\", pattern: \"^[A-Z2-7]+=*$\" }, otpauthUrl: { type: \"string\", pattern: \"^otpauth://totp/\" } }",
+                  "}));",
+                  "pm.collectionVariables.set(\"adminSecret\", pm.response.json().secretBase32);",
+                  "pm.collectionVariables.set(\"adminChallenge\", pm.response.json().challenge);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verificar código TOTP y obtener token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/admin-2fa/enroll-verify",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "admin-2fa",
+                "enroll-verify"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"challenge\": \"{{adminChallenge}}\",\n  \"code\": \"{{totp}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Calcula el código TOTP (RFC 6238, SHA-1, 6 dígitos, 30 s) a partir del secreto base32,",
+                  "// igual que una app autenticadora. Así el flujo de segundo factor se automatiza.",
+                  "const cripto = require(\"crypto-js\");",
+                  "const secreto = pm.collectionVariables.get(\"adminSecret\");",
+                  "const alfabeto = \"ABCDEFGHIJKLMNOPQRSTUVWXYZ234567\";",
+                  "let bits = \"\";",
+                  "for (const c of secreto.replace(/=+$/, \"\").toUpperCase()) bits += alfabeto.indexOf(c).toString(2).padStart(5, \"0\");",
+                  "let claveHex = \"\";",
+                  "for (let i = 0; i + 8 <= bits.length; i += 8) claveHex += parseInt(bits.substr(i, 8), 2).toString(16).padStart(2, \"0\");",
+                  "const contador = Math.floor(Date.now() / 1000 / 30).toString(16).padStart(16, \"0\");",
+                  "const hmac = cripto.HmacSHA1(cripto.enc.Hex.parse(contador), cripto.enc.Hex.parse(claveHex)).toString(cripto.enc.Hex);",
+                  "const desplazamiento = parseInt(hmac.slice(-1), 16);",
+                  "const codigo = (parseInt(hmac.substr(desplazamiento * 2, 8), 16) & 0x7fffffff) % 1000000;",
+                  "pm.collectionVariables.set(\"totp\", String(codigo).padStart(6, \"0\"));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Esquema de sesión\", () => pm.response.to.have.jsonSchema({",
+                  "  type: \"object\", required: [\"accessToken\", \"user\"], properties: { user: { type: \"object\", properties: { role: { enum: [\"admin\"] } } } }",
+                  "}));",
+                  "pm.test(\"El secreto 2FA no se expone\", () => pm.expect(pm.response.json().user.twoFA || {}).to.not.have.property(\"secret\"));",
+                  "pm.collectionVariables.set(\"adminToken\", pm.response.json().accessToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear cupón MIN2100",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/coupons",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "coupons"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"MIN2100\",\n  \"type\": \"fixed\",\n  \"value\": 200,\n  \"minOrderValue\": 2100,\n  \"active\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Esquema del cupón\", () => pm.response.to.have.jsonSchema({",
+                  "  type: \"object\", required: [\"_id\", \"code\", \"type\", \"value\", \"active\"],",
+                  "  properties: { type: { enum: [\"fixed\", \"percent\"] }, value: { type: \"number\" } }",
+                  "}));",
+                  "pm.test(\"Código normalizado y activo\", () => {",
+                  "  const c = pm.response.json();",
+                  "  pm.expect(c.code).to.eql(\"MIN2100\");",
+                  "  pm.expect(c.active).to.be.true;",
+                  "  pm.expect(c.minOrderValue).to.eql(2100);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 Flujo de compra completo (RF-05 a RF-12)",
+      "description": "Flujo encadenado: carrito → cupón → pedido → estados → devolución. Cada solicitud usa variables guardadas por la anterior.",
+      "item": [
+        {
+          "name": "Agregar más unidades que la existencia",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{compradorToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cart",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cart"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{dijeId}}\",\n  \"qty\": {{qtyExcedida}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"qtyExcedida\", Number(pm.collectionVariables.get(\"dijeStock\")) + 1);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código 400 (CP-11)\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Esquema de error\", () => pm.response.to.have.jsonSchema({ type: \"object\", required: [\"message\"] }));",
+                  "pm.test(\"Mensaje: sin existencia\", () => pm.expect(pm.response.json().message).to.eql(\"Not enough stock\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Agregar el maletín al carrito",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{compradorToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cart",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cart"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{maletinId}}\",\n  \"qty\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Esquema del carrito\", () => pm.response.to.have.jsonSchema({",
+                  "  type: \"object\", required: [\"items\", \"subtotal\"],",
+                  "  properties: { items: { type: \"array\", minItems: 1, items: { type: \"object\", required: [\"_id\", \"product\", \"qty\"] } }, subtotal: { type: \"number\" } }",
+                  "}));",
+                  "pm.test(\"Subtotal 2 100 con 1 unidad\", () => {",
+                  "  const b = pm.response.json();",
+                  "  pm.expect(b.subtotal).to.eql(2100);",
+                  "  pm.expect(b.items[0].qty).to.eql(1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Aplicar cupón con subtotal igual al mínimo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{compradorToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cart/apply-coupon",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cart",
+                "apply-coupon"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"min2100\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código 200 (CP-13)\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Esquema con descuento\", () => pm.response.to.have.jsonSchema({",
+                  "  type: \"object\", required: [\"appliedCoupon\", \"subtotal\", \"discount\", \"discountedSubtotal\"],",
+                  "  properties: { appliedCoupon: { type: \"object\", required: [\"code\"] } }",
+                  "}));",
+                  "pm.test(\"Descuento 200: subtotal 2 100 → 1 900\", () => {",
+                  "  const b = pm.response.json();",
+                  "  pm.expect(b.appliedCoupon.code).to.eql(\"MIN2100\");",
+                  "  pm.expect(b.discount).to.eql(200);",
+                  "  pm.expect(b.discountedSubtotal).to.eql(1900);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear pedido con envío express",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{compradorToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"address\": \"Comprador Postman, 6a avenida 1-23 zona 1, Guatemala, tel. 5555-5555\",\n  \"shippingMethod\": \"express\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Esquema del pedido\", () => pm.response.to.have.jsonSchema({",
+                  "  type: \"object\", required: [\"_id\", \"items\", \"subtotal\", \"tax\", \"shippingCost\", \"totalAmount\", \"status\", \"paymentMethod\"],",
+                  "  properties: { status: { enum: [\"pending\"] }, paymentMethod: { enum: [\"COD\"] } }",
+                  "}));",
+                  "pm.test(\"Totales (RF-09): 2 100 − 200, impuesto 95, envío 99, total 2 094\", () => {",
+                  "  const o = pm.response.json();",
+                  "  pm.expect(o.subtotal).to.eql(2100);",
+                  "  pm.expect(o.appliedCoupon.discountAmount).to.eql(200);",
+                  "  pm.expect(o.tax).to.eql(95);",
+                  "  pm.expect(o.shippingCost).to.eql(99);",
+                  "  pm.expect(o.totalAmount).to.eql(2094);",
+                  "});",
+                  "pm.collectionVariables.set(\"orderId\", pm.response.json()._id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "El carrito queda vacío después del pedido",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{compradorToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cart",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cart"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Esquema del carrito\", () => pm.response.to.have.jsonSchema({ type: \"object\", required: [\"items\", \"subtotal\"] }));",
+                  "pm.test(\"Sin productos ni cupón\", () => {",
+                  "  const b = pm.response.json();",
+                  "  pm.expect(b.items).to.have.length(0);",
+                  "  pm.expect(b.appliedCoupon).to.be.null;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin cambia el pedido a confirmed",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{orderId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "{{orderId}}",
+                "status"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"confirmed\",\n  \"note\": \"Transición pending → confirmed\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Esquema de la respuesta\", () => pm.response.to.have.jsonSchema({",
+                  "  type: \"object\", required: [\"message\", \"order\"], properties: { order: { type: \"object\", required: [\"_id\", \"status\"] } }",
+                  "}));",
+                  "pm.test(\"Transición pending → confirmed (RF-10 a)\", () => {",
+                  "  pm.expect(pm.response.json().message).to.eql(\"Order status updated to confirmed\");",
+                  "  pm.expect(pm.response.json().order.status).to.eql(\"confirmed\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin cambia el pedido a shipped",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{orderId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "{{orderId}}",
+                "status"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"shipped\",\n  \"note\": \"Transición confirmed → shipped\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Esquema de la respuesta\", () => pm.response.to.have.jsonSchema({",
+                  "  type: \"object\", required: [\"message\", \"order\"], properties: { order: { type: \"object\", required: [\"_id\", \"status\"] } }",
+                  "}));",
+                  "pm.test(\"Transición confirmed → shipped (RF-10 a)\", () => {",
+                  "  pm.expect(pm.response.json().message).to.eql(\"Order status updated to shipped\");",
+                  "  pm.expect(pm.response.json().order.status).to.eql(\"shipped\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin cambia el pedido a delivered",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{orderId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "{{orderId}}",
+                "status"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"delivered\",\n  \"note\": \"Transición shipped → delivered\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Esquema de la respuesta\", () => pm.response.to.have.jsonSchema({",
+                  "  type: \"object\", required: [\"message\", \"order\"], properties: { order: { type: \"object\", required: [\"_id\", \"status\"] } }",
+                  "}));",
+                  "pm.test(\"Transición shipped → delivered (RF-10 a)\", () => {",
+                  "  pm.expect(pm.response.json().message).to.eql(\"Order status updated to delivered\");",
+                  "  pm.expect(pm.response.json().order.status).to.eql(\"delivered\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bitácora del pedido",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{compradorToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{orderId}}/audit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "{{orderId}}",
+                "audit"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Esquema de la bitácora\", () => pm.response.to.have.jsonSchema({",
+                  "  type: \"array\", items: { type: \"object\", required: [\"toStatus\", \"createdAt\"] }",
+                  "}));",
+                  "pm.test(\"Registra los cuatro estados en orden\", () => {",
+                  "  pm.expect(pm.response.json().map((a) => a.toStatus)).to.eql([\"pending\", \"confirmed\", \"shipped\", \"delivered\"]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Devolver más unidades que las compradas",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{compradorToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{orderId}}/returns",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "{{orderId}}",
+                "returns"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"product\": \"{{maletinId}}\",\n      \"qty\": 2\n    }\n  ],\n  \"reason\": \"Producto dañado\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código 400 (CP-28)\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Esquema de error\", () => pm.response.to.have.jsonSchema({ type: \"object\", required: [\"message\"] }));",
+                  "pm.test(\"Mensaje: excede lo devolvible\", () => pm.expect(pm.response.json().message).to.eql(\"Requested quantity exceeds available returnable quantity\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Solicitar devolución del pedido entregado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{compradorToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{orderId}}/returns",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "{{orderId}}",
+                "returns"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"product\": \"{{maletinId}}\",\n      \"qty\": 1\n    }\n  ],\n  \"reason\": \"Producto dañado\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código 201 (CP-26)\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Esquema de la devolución\", () => pm.response.to.have.jsonSchema({",
+                  "  type: \"object\", required: [\"_id\", \"order\", \"items\", \"status\"],",
+                  "  properties: { status: { enum: [\"requested\"] }, items: { type: \"array\", minItems: 1 } }",
+                  "}));",
+                  "pm.test(\"Una unidad al precio pagado\", () => {",
+                  "  const it = pm.response.json().items[0];",
+                  "  pm.expect(it.qty).to.eql(1);",
+                  "  pm.expect(it.price).to.eql(2100);",
+                  "});",
+                  "pm.collectionVariables.set(\"returnId\", pm.response.json()._id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin aprueba la devolución",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/returns/{{returnId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "returns",
+                "{{returnId}}",
+                "status"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"approved\",\n  \"note\": \"Aprobada tras revisión\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Esquema de la respuesta\", () => pm.response.to.have.jsonSchema({ type: \"object\" }));",
+                  "pm.test(\"Queda aprobada (RF-12 a)\", () => {",
+                  "  const b = pm.response.json();",
+                  "  pm.expect((b.request || b).status).to.eql(\"approved\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "El comprador ve su devolución aprobada",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{compradorToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{orderId}}/returns",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "{{orderId}}",
+                "returns"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Esquema de la lista\", () => pm.response.to.have.jsonSchema({ type: \"array\", minItems: 1, items: { type: \"object\", required: [\"_id\", \"status\"] } }));",
+                  "pm.test(\"Estado approved\", () => pm.expect(pm.response.json()[0].status).to.eql(\"approved\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": []
+}
