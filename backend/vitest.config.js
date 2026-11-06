@@ -24,6 +24,8 @@ export default defineConfig({
       include: MODULOS_CRITICOS,
       reporter: ["text", "lcov", "json-summary"],
       reportsDirectory: "coverage",
+      // Falla la ejecución si la cobertura de líneas de los módulos críticos baja del mínimo exigido (20 %).
+      thresholds: { lines: 20 },
     },
   },
 });
