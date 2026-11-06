@@ -995,6 +995,38 @@
           ]
         },
         {
+          "name": "La existencia del maletín bajó con el pedido",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{maletinId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "{{maletinId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código 200\", () => pm.response.to.have.status(200));",
+                  "const p = pm.response.json().product || pm.response.json();",
+                  "pm.test(\"Esquema del producto\", () => pm.expect(p).to.include.keys(\"_id\", \"title\", \"stock\"));",
+                  "pm.test(\"Existencia 8 → 7 después del pedido (RF-08)\", () => pm.expect(p.stock).to.eql(7));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Admin cambia el pedido a confirmed",
           "request": {
             "method": "PATCH",

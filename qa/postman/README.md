@@ -1,6 +1,6 @@
 # Pruebas de API (E11)
 
-Colección de Postman con 28 solicitudes y 87 aserciones automáticas sobre código de respuesta, esquema JSON y contenido.
+Colección de Postman con 29 solicitudes y 90 aserciones automáticas sobre código de respuesta, esquema JSON y contenido.
 
 | Carpeta | Qué cubre |
 | --- | --- |
@@ -13,7 +13,7 @@ Las solicitudes se encadenan con variables de colección (`compradorToken`, `adm
 
 ## Ejecución local
 
-Requiere una base recién sembrada, porque el admin del seed se enrola en 2FA durante la corrida.
+Requiere una base limpia y recién sembrada: durante la corrida el admin del seed se enrola en 2FA y se crea el cupón MIN2100.
 
 ```bash
 cd backend
