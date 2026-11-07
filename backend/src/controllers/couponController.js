@@ -7,10 +7,36 @@ function normArray(arr) {
   return a.map((s) => String(s).trim()).filter(Boolean);
 }
 
+// Campos que un administrador puede definir. Los contadores de uso (usedCount, usedBy)
+// solo los modifica el sistema al crear pedidos, nunca la solicitud del cliente.
+const EDITABLE_FIELDS = [
+  "code",
+  "type",
+  "value",
+  "active",
+  "startsAt",
+  "expiresAt",
+  "minOrderValue",
+  "maxDiscount",
+  "usageLimit",
+  "perUserLimit",
+  "allowedCategories",
+  "allowedBrands",
+  "description",
+];
+
+function pickEditable(body = {}) {
+  const out = {};
+  for (const field of EDITABLE_FIELDS) {
+    if (body[field] !== undefined) out[field] = body[field];
+  }
+  return out;
+}
+
 // Create
 export const createCoupon = async (req, res) => {
   try {
-    const payload = req.body || {};
+    const payload = pickEditable(req.body);
     payload.code = String(payload.code || "")
       .toUpperCase()
       .trim();
@@ -63,7 +89,7 @@ export const getCoupon = async (req, res) => {
 // Update
 export const updateCoupon = async (req, res) => {
   try {
-    const payload = { ...req.body };
+    const payload = pickEditable(req.body);
     if (payload.code) payload.code = String(payload.code).toUpperCase().trim();
     if (payload.allowedCategories !== undefined)
       payload.allowedCategories = normArray(payload.allowedCategories);

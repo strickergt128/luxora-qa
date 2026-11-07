@@ -1,6 +1,7 @@
 import Banner from "../models/Banner.js";
 import AnalyticsEvent from "../models/AnalyticsEvent.js";
 import { logAdminAction } from "../utils/adminLog.js";
+import { clientIp, sessionOf, ymdUTC } from "../utils/session.js";
 
 // Helper to normalize slugs (if passed)
 const norm = (s) =>
@@ -9,29 +10,6 @@ const norm = (s) =>
     : s === undefined
     ? undefined
     : String(s).toLowerCase().trim();
-
-const clientIp = (req) =>
-  (Array.isArray(req.headers["x-forwarded-for"])
-    ? req.headers["x-forwarded-for"][0]
-    : req.headers["x-forwarded-for"] || req.ip || ""
-  )
-    .toString()
-    .split(",")[0]
-    .trim() || "unknown";
-
-const sessionOf = (req) => {
-  const ua = (req.get("user-agent") || "").slice(0, 128);
-  return (
-    req.cookies?.sid || req.cookies?.rt || `${clientIp(req)}|${ua.slice(0, 32)}`
-  );
-};
-
-const ymdUTC = (d = new Date()) => {
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(d.getUTCDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-};
 
 // -------- Public --------
 export const getActiveBanner = async (req, res) => {

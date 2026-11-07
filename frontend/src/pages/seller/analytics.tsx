@@ -92,7 +92,7 @@ const isCanceled = (e: any) =>
 const categoryColor = (name: string) => {
   const s = String(name || "Other");
   let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  for (let i = 0; i < s.length; i++) h = Math.trunc((h * 31 + s.charCodeAt(i)) % 2147483647);
   const hue = Math.abs(h) % 360;
   return `hsl(${hue} 60% 50%)`;
 };
