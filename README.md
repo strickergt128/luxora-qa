@@ -1,4 +1,69 @@
-# Luxora E-Commerce
+# Luxora E-Commerce — Evaluación de calidad (ACS 2026)
+
+Repositorio del proyecto final de Aseguramiento de la Calidad de Software. La aplicación bajo evaluación es Luxora E-Commerce (importada de VortexDevX/E-Commerce, licencia ISC); el equipo no la desarrolló, la evalúa.
+
+| Ambiente | Rama | Frontend | API |
+| --- | --- | --- | --- |
+| Producción | `main` | https://luxora-qa.vercel.app | https://luxora-api-x8g7.onrender.com |
+| QA | `qa` | https://luxora-qa-staging.vercel.app | Render (`luxora-api-qa`) |
+| Desarrollo | `dev` | Solo pipeline (sin despliegue) | — |
+
+Estrategia de ramas y política de promoción: [docs/ESTRATEGIA-DE-RAMAS.md](docs/ESTRATEGIA-DE-RAMAS.md).
+
+## Instalación
+
+Requisitos: Node.js 22 y una base MongoDB (local o Atlas).
+
+```bash
+git clone https://github.com/strickergt128/luxora-qa.git
+cd luxora-qa
+
+# Backend
+cd backend
+cp .env.example .env        # completar MONGODB_URI, JWT_ACCESS_SECRET y JWT_MFA_SECRET
+npm ci
+MONGO_URI=<uri de MongoDB> npm run seed   # usuarios y productos de prueba
+npm run dev                 # http://localhost:8080
+
+# Frontend (otra terminal)
+cd frontend
+npm ci
+npm run dev                 # http://localhost:3000
+```
+
+Usuarios del seed: `admin@luxora.com`, `seller@luxora.com` y `user@luxora.com`, todos con la contraseña `password123` (solo para ambientes de prueba).
+
+## Ejecución de pruebas
+
+| Prueba | Comando | Dónde |
+| --- | --- | --- |
+| Unitarias backend (Vitest) | `npm test` / `npm run coverage` | `backend/` |
+| Unitarias frontend (Vitest) | `npm test` / `npm run coverage` | `frontend/` |
+| Cobertura de los módulos críticos | `node qa/scripts/cobertura-criticos.mjs --min 20` | raíz (después de `npm run coverage` en ambos) |
+| API (Postman + Newman) | ver [qa/postman/README.md](qa/postman/README.md) | raíz, con el backend corriendo sobre una base recién sembrada |
+| Carga (k6) | `k6 run qa/k6/carga.js` | raíz; `-e BASE_URL=<url>` para otro ambiente |
+
+Los reportes se generan en `backend/coverage`, `frontend/coverage`, `backend/reports`, `frontend/reports` y `qa/k6/resultado.json` (no se versionan).
+
+## Ejecución del pipeline
+
+El workflow [`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml) (GitHub Actions, nombre **CI-CD**) ejecuta en orden:
+
+1. Compilación (verificación de sintaxis del backend y `next build` del frontend).
+2. Pruebas unitarias con cobertura y verificación de +20 pp sobre los módulos críticos.
+3. Análisis estático en SonarCloud con espera del quality gate.
+4. Pruebas de API: MongoDB como servicio, seed, backend y Newman.
+5. Despliegue: push a `qa` → ambiente QA; push a `main` → producción (deploy hooks de Render y Vercel y prueba de humo).
+
+Se dispara con cada push y Pull Request hacia `dev`, `qa` y `main`. Para ejecutarlo manualmente: **Actions → CI-CD → Run workflow** y elegir la rama. Los merges hacia `dev`, `qa` y `main` quedan bloqueados si alguna de las etapas 1 a 4 falla.
+
+Secretos y variables necesarios (GitHub → Settings): `SONAR_TOKEN` (repositorio) y, en los ambientes `qa` y `production`, los secretos `RENDER_DEPLOY_HOOK` y `VERCEL_DEPLOY_HOOK` y las variables `APP_URL` y `API_URL`.
+
+Análisis estático: https://sonarcloud.io/project/overview?id=strickergt128_luxora-qa
+
+---
+
+## Aplicación original
 
 Full-stack e-commerce app with a Next.js frontend and an Express/MongoDB backend.
 
