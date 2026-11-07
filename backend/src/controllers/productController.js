@@ -7,6 +7,7 @@ import PriceAlertLog from "../models/PriceAlertLog.js";
 import { sendPriceDropEmail } from "../services/email/emailService.js";
 import SponsoredPlacement from "../models/SponsoredPlacement.js";
 import AnalyticsEvent from "../models/AnalyticsEvent.js";
+import { clientIp, sessionOf, ymdUTC } from "../utils/session.js";
 import { asText } from "../utils/sanitize.js";
 
 const escapeRegex = (input = "") =>
@@ -28,29 +29,6 @@ const ALLOWED_SORT_FIELDS = new Set([
 // ---------------- Helpers ----------------
 const ALSO_BOUGHT_TTL = 10 * 60 * 1000; // 10 minutes
 const alsoBoughtCache = new Map(); // key: `${productId}:${limit}` -> { expires, items }
-
-const clientIp = (req) =>
-  (Array.isArray(req.headers["x-forwarded-for"])
-    ? req.headers["x-forwarded-for"][0]
-    : req.headers["x-forwarded-for"] || req.ip || ""
-  )
-    .toString()
-    .split(",")[0]
-    .trim() || "unknown";
-
-const sessionOf = (req) => {
-  const ua = (req.get("user-agent") || "").slice(0, 128);
-  return asText(
-    req.cookies?.sid || req.cookies?.rt || `${clientIp(req)}|${ua.slice(0, 32)}`
-  );
-};
-
-const ymdUTC = (d = new Date()) => {
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(d.getUTCDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-};
 
 // ---------------- Customers Also Bought ----------------
 export const getAlsoBought = async (req, res) => {

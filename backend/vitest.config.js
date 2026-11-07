@@ -21,8 +21,8 @@ export default defineConfig({
     outputFile: { junit: "reports/junit-backend.xml" },
     coverage: {
       provider: "v8",
-      // sanitize.js se agrega para medir la utilidad nueva de las correcciones de Sonar.
-      include: [...MODULOS_CRITICOS, "src/utils/sanitize.js"],
+      // sanitize.js y session.js se agregan para medir las utilidades nuevas de las correcciones de Sonar.
+      include: [...MODULOS_CRITICOS, "src/utils/sanitize.js", "src/utils/session.js"],
       reporter: ["text", "lcov", "json-summary"],
       reportsDirectory: "coverage",
       // Falla la ejecución si la cobertura de líneas de los módulos críticos baja del mínimo exigido (20 %).
