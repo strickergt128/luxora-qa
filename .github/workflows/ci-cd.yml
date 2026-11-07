@@ -1,0 +1,197 @@
+# Pipeline de integración y despliegue continuo (E13)
+# Orden: compilación → pruebas unitarias → análisis estático con quality gate → pruebas de API → despliegue.
+# Cada etapa depende de la anterior: si una falla, las siguientes no se ejecutan.
+name: CI-CD
+
+on:
+  push:
+    branches: [dev, qa, main]
+  pull_request:
+    branches: [dev, qa, main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  build:
+    name: 1 Compilación
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+      - name: Backend — instalar dependencias
+        working-directory: backend
+        run: npm ci
+      - name: Backend — verificar sintaxis de todos los módulos
+        working-directory: backend
+        run: |
+          node --check server.js
+          find src -name "*.js" -print0 | xargs -0 -n1 node --check
+      - name: Frontend — instalar dependencias
+        working-directory: frontend
+        run: npm ci
+      - name: Frontend — compilar (next build)
+        working-directory: frontend
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+          NEXT_PUBLIC_BACKEND_ORIGIN: http://localhost:8080
+        run: npm run build
+
+  unit-tests:
+    name: 2 Pruebas unitarias
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+      - name: Backend — pruebas unitarias con cobertura
+        working-directory: backend
+        run: npm ci && npm run coverage
+      - name: Frontend — pruebas unitarias con cobertura
+        working-directory: frontend
+        run: npm ci && npm run coverage
+      - name: Cobertura sobre los módulos críticos (mínimo +20 pp)
+        run: node qa/scripts/cobertura-criticos.mjs --min 20 | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Guardar reportes de cobertura y JUnit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cobertura
+          path: |
+            backend/coverage
+            frontend/coverage
+            backend/reports
+            frontend/reports
+          retention-days: 14
+
+  sonar:
+    name: 3 Análisis estático y quality gate
+    needs: unit-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Sonar necesita el historial para detectar el código nuevo
+      - name: Descargar reportes de cobertura
+        uses: actions/download-artifact@v4
+        with:
+          name: cobertura
+      - name: Análisis con SonarCloud y espera del quality gate
+        uses: SonarSource/sonarqube-scan-action@v5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
+        with:
+          args: >
+            -Dsonar.qualitygate.wait=true
+            -Dsonar.qualitygate.timeout=300
+
+  api-tests:
+    name: 4 Pruebas de API
+    needs: sonar
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ ping: 1 })'"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      NODE_ENV: test
+      PORT: "8080"
+      MONGODB_URI: mongodb://localhost:27017/luxora
+      MONGO_URI: mongodb://localhost:27017/luxora
+      JWT_ACCESS_SECRET: ci-access-secret
+      JWT_MFA_SECRET: ci-mfa-secret
+      FRONTEND_URL: http://localhost:3000
+      EMAIL_DISABLED: "true"
+      STORAGE_MODE: local
+      RL_DISABLED: "true"
+      TAX_RATE: "0.05"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Instalar backend y sembrar la base de datos
+        working-directory: backend
+        run: npm ci && npm run seed
+      - name: Iniciar el backend
+        working-directory: backend
+        run: |
+          nohup node server.js > ../backend.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -fsS http://localhost:8080/api/health && exit 0
+            sleep 2
+          done
+          cat ../backend.log
+          exit 1
+      - name: Ejecutar la colección de Postman con Newman
+        run: |
+          npm install -g newman@6 newman-reporter-htmlextra
+          newman run qa/postman/luxora-api.postman_collection.json \
+            -e qa/postman/local.postman_environment.json \
+            -r cli,junit,htmlextra \
+            --reporter-junit-export reports/api/newman-junit.xml \
+            --reporter-htmlextra-export reports/api/newman.html
+      - name: Guardar reporte de Newman y log del backend
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pruebas-api
+          path: |
+            reports/api
+            backend.log
+          retention-days: 14
+
+  deploy:
+    name: 5 Despliegue
+    needs: api-tests
+    # Solo despliega al integrar en qa (ambiente QA) o en main (producción); los PR no despliegan.
+    if: github.event_name != 'pull_request' && (github.ref_name == 'qa' || github.ref_name == 'main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: ${{ github.ref_name == 'main' && 'production' || 'qa' }}
+      url: ${{ vars.APP_URL }}
+    steps:
+      - name: Desplegar la API en Render
+        run: curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}" > /dev/null && echo "Despliegue de la API solicitado"
+      - name: Desplegar el frontend en Vercel
+        run: curl -fsS -X POST "${{ secrets.VERCEL_DEPLOY_HOOK }}" > /dev/null && echo "Despliegue del frontend solicitado"
+      - name: Prueba de humo del ambiente
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS "${{ vars.API_URL }}/api/health"; then echo; echo "API en línea"; exit 0; fi
+            sleep 10
+          done
+          echo "La API no respondió en 5 minutos"
+          exit 1

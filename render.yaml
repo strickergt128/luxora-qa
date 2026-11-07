@@ -10,7 +10,8 @@ services:
     buildCommand: npm ci
     startCommand: npm start
     healthCheckPath: /api/health
-    autoDeploy: true
+    # Despliega solo cuando el pipeline CI-CD lo solicita (deploy hook), después de pasar todas las pruebas.
+    autoDeploy: false
     envVars:
       - key: NODE_ENV
         value: production
