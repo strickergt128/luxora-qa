@@ -1,12 +1,13 @@
 import Review from "../models/Review.js";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
+import { asText } from "../utils/sanitize.js";
 
 // ---------------- Add/Update Reviews ----------------
 
 export const addReview = async (req, res) => {
   try {
-    const { productId } = req.body;
+    const productId = asText(req.body.productId);
     const rating = Number(req.body.rating);
     const comment =
       typeof req.body.comment === "string" ? req.body.comment : "";

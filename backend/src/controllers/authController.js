@@ -19,6 +19,7 @@ import {
   sendWelcomeEmail,
   sendPasswordResetEmail,
 } from "../services/email/emailService.js";
+import { asText } from "../utils/sanitize.js";
 
 const newFamilyId = () => crypto.randomBytes(16).toString("hex");
 const clientMeta = (req) => ({ ip: req.ip, ua: req.get("user-agent") });
@@ -66,7 +67,8 @@ const sanitizeUser = (user) => {
 // Register (unchanged for non-admin)
 export const registerUser = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, password, role } = req.body;
+    const email = asText(req.body.email);
     if (!name || !email || !password)
       return res.status(400).json({ message: "All fields required" });
 
@@ -92,7 +94,8 @@ export const registerUser = async (req, res) => {
 // Login (admin requires 2FA challenge)
 export const loginUser = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { password } = req.body;
+    const email = asText(req.body.email);
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ message: "Invalid credentials" });
 
@@ -349,7 +352,7 @@ export const refreshToken = async (req, res) => {
 // Forgot Password — issues hashed, one-time token; also sets legacy fields for transition
 export const forgotPassword = async (req, res) => {
   try {
-    const { email } = req.body;
+    const email = asText(req.body.email);
     const user = await User.findOne({ email });
     if (!user)
       return res.status(404).json({ message: "No user with that email" }); // Keep behavior for compatibility

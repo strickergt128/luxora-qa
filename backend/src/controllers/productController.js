@@ -7,6 +7,7 @@ import PriceAlertLog from "../models/PriceAlertLog.js";
 import { sendPriceDropEmail } from "../services/email/emailService.js";
 import SponsoredPlacement from "../models/SponsoredPlacement.js";
 import AnalyticsEvent from "../models/AnalyticsEvent.js";
+import { asText } from "../utils/sanitize.js";
 
 const escapeRegex = (input = "") =>
   String(input).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -39,7 +40,7 @@ const clientIp = (req) =>
 
 const sessionOf = (req) => {
   const ua = (req.get("user-agent") || "").slice(0, 128);
-  return (
+  return asText(
     req.cookies?.sid || req.cookies?.rt || `${clientIp(req)}|${ua.slice(0, 32)}`
   );
 };
@@ -404,7 +405,7 @@ export const listProducts = async (req, res) => {
       ];
     }
 
-    if (category) filter.category = category;
+    if (category) filter.category = asText(category);
 
     if (minPrice != null || maxPrice != null) {
       filter.price = {};
@@ -419,7 +420,7 @@ export const listProducts = async (req, res) => {
           .map((s) => s.trim()),
       };
 
-    if (owner) filter.owner = owner;
+    if (owner) filter.owner = asText(owner);
 
     if (String(inStock) === "true") {
       filter.stock = { $gt: 0 };

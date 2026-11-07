@@ -1,6 +1,7 @@
 import Banner from "../models/Banner.js";
 import AnalyticsEvent from "../models/AnalyticsEvent.js";
 import { logAdminAction } from "../utils/adminLog.js";
+import { asText } from "../utils/sanitize.js";
 
 // Helper to normalize slugs (if passed)
 const norm = (s) =>
@@ -21,7 +22,7 @@ const clientIp = (req) =>
 
 const sessionOf = (req) => {
   const ua = (req.get("user-agent") || "").slice(0, 128);
-  return (
+  return asText(
     req.cookies?.sid || req.cookies?.rt || `${clientIp(req)}|${ua.slice(0, 32)}`
   );
 };

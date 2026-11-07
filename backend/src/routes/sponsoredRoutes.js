@@ -1,6 +1,7 @@
 import express from "express";
 import SponsoredPlacement from "../models/SponsoredPlacement.js";
 import AnalyticsEvent from "../models/AnalyticsEvent.js";
+import { asText } from "../utils/sanitize.js";
 
 const router = express.Router();
 
@@ -15,7 +16,7 @@ const clientIp = (req) =>
 
 const sessionOf = (req) => {
   const ua = (req.get("user-agent") || "").slice(0, 128);
-  return (
+  return asText(
     req.cookies?.sid || req.cookies?.rt || `${clientIp(req)}|${ua.slice(0, 32)}`
   );
 };
