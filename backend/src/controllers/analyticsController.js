@@ -159,8 +159,9 @@ export const getAdminFunnel = async (req, res) => {
         toDate.getUTCDate()
       )
     );
-    for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
-      const key = d.toISOString().slice(0, 10);
+    const DAY_MS = 24 * 60 * 60 * 1000;
+    for (let t = start.getTime(); t <= end.getTime(); t += DAY_MS) {
+      const key = new Date(t).toISOString().slice(0, 10);
       out.push(
         map.get(key) || {
           date: key,

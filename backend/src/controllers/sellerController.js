@@ -5,6 +5,7 @@ import {
   logOrderStatusChange,
   ALLOWED_ORDER_STATUSES,
 } from "../utils/audit.js";
+import { asText } from "../utils/sanitize.js";
 
 // GET /api/seller/products
 export const listMyProducts = async (req, res) => {
@@ -30,7 +31,7 @@ export const listMyOrders = async (req, res) => {
     const productIds = myProducts.map((p) => p._id);
 
     const query = { "items.product": { $in: productIds } };
-    if (status) query.status = status;
+    if (status) query.status = asText(status);
     if (from || to) {
       query.createdAt = {};
       if (from) query.createdAt.$gte = new Date(from);
