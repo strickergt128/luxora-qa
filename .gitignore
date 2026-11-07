@@ -44,3 +44,4 @@ Claude outputs/
 coverage/
 reports/
 qa/cobertura-criticos.json
+qa/k6/resultado.json
