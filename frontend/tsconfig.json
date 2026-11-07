@@ -28,6 +28,9 @@
     "**/*.tsx"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "tests",
+    "coverage",
+    "vitest.config.ts"
   ]
 }
