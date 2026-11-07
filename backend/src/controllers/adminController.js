@@ -15,6 +15,7 @@ import {
   logOrderStatusChange,
   ALLOWED_ORDER_STATUSES,
 } from "../utils/audit.js";
+import { asText } from "../utils/sanitize.js";
 
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
@@ -765,7 +766,7 @@ export const listOrderAuditLogs = async (req, res) => {
       if (!isValidObjectId(orderId)) {
         return res.status(400).json({ message: "Invalid orderId" });
       }
-      filter.order = orderId;
+      filter.order = asText(orderId);
     }
 
     // Filter by toStatus
@@ -780,7 +781,7 @@ export const listOrderAuditLogs = async (req, res) => {
       if (!allowedStatuses.includes(toStatus)) {
         return res.status(400).json({ message: "Invalid toStatus" });
       }
-      filter.toStatus = toStatus;
+      filter.toStatus = asText(toStatus);
     }
 
     // Filter by context
@@ -789,7 +790,7 @@ export const listOrderAuditLogs = async (req, res) => {
       if (!allowedContexts.includes(context)) {
         return res.status(400).json({ message: "Invalid context" });
       }
-      filter.context = context;
+      filter.context = asText(context);
     }
 
     // Date range
@@ -811,7 +812,7 @@ export const listOrderAuditLogs = async (req, res) => {
     // changedBy: email substring OR ObjectId
     if (changedBy) {
       if (isValidObjectId(changedBy)) {
-        filter.changedBy = changedBy;
+        filter.changedBy = asText(changedBy);
       } else if (typeof changedBy === "string" && changedBy.trim().length > 0) {
         const users = await User.find({
           email: { $regex: changedBy.trim(), $options: "i" },
@@ -869,8 +870,8 @@ export const listAdminActionLogs = async (req, res) => {
     const l = Math.min(Math.max(parseInt(limit) || 20, 1), 100);
 
     const filter = {};
-    if (action) filter.action = action;
-    if (entityType) filter.entityType = entityType;
+    if (action) filter.action = asText(action);
+    if (entityType) filter.entityType = asText(entityType);
     if (entityId) filter.entityId = String(entityId);
     if (q) filter.summary = { $regex: String(q).trim(), $options: "i" };
 
@@ -891,7 +892,7 @@ export const listAdminActionLogs = async (req, res) => {
 
     if (changedBy) {
       if (isValidObjectId(changedBy)) {
-        filter.changedBy = changedBy;
+        filter.changedBy = asText(changedBy);
       } else {
         const users = await User.find({
           email: { $regex: String(changedBy).trim(), $options: "i" },
@@ -1012,9 +1013,9 @@ export const listReturnRequests = async (req, res) => {
     const l = Math.min(Math.max(parseInt(limit) || 20, 1), 100);
 
     const filter = {};
-    if (status) filter.status = status;
-    if (orderId) filter.order = orderId;
-    if (userId) filter.user = userId;
+    if (status) filter.status = asText(status);
+    if (orderId) filter.order = asText(orderId);
+    if (userId) filter.user = asText(userId);
     if (from || to) {
       filter.requestedAt = {};
       if (from) {

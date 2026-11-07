@@ -1,6 +1,7 @@
 import User from "../models/User.js";
 import RefreshToken from "../models/RefreshToken.js";
 import { clearRefreshTokenCookie } from "../utils/token.js";
+import { asText } from "../utils/sanitize.js";
 
 // ---------------- User Requests Seller Role ----------------
 
@@ -73,7 +74,10 @@ export const updateMe = async (req, res) => {
     if (!user) return res.status(404).json({ message: "User not found" });
 
     if (email && email !== user.email) {
-      const taken = await User.findOne({ email, _id: { $ne: user._id } });
+      const taken = await User.findOne({
+        email: asText(email),
+        _id: { $ne: user._id },
+      });
       if (taken)
         return res.status(400).json({ message: "Email already in use" });
       user.email = email;

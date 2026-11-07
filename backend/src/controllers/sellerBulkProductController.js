@@ -218,7 +218,12 @@ export const importBulk = async (req, res) => {
     const zipFile = req.files?.media?.[0]; // optional
     let zipIndex = new Map();
     if (zipFile) {
-      const zip = new AdmZip(zipFile.buffer);
+      // El ZIP se lee solo en memoria (no se extrae a disco) y los nombres de sus entradas
+      // se reducen con path.basename, por lo que no puede escribir fuera de una carpeta.
+      if (!Buffer.isBuffer(zipFile.buffer)) {
+        return res.status(400).json({ message: "Invalid media archive" });
+      }
+      const zip = new AdmZip(Buffer.from(zipFile.buffer));
       for (const e of zip.getEntries()) {
         if (e.isDirectory) continue;
         const base = path.basename(e.entryName).toLowerCase();

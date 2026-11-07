@@ -1,5 +1,6 @@
 // backend/src/controllers/categoryController.js
 import Category from "../models/Category.js";
+import { asText } from "../utils/sanitize.js";
 
 export const listCategories = async (_req, res) => {
   try {
@@ -13,7 +14,8 @@ export const listCategories = async (_req, res) => {
 // Admin only
 export const createCategory = async (req, res) => {
   try {
-    const { name, active = true } = req.body;
+    const { active = true } = req.body;
+    const name = asText(req.body.name).trim();
     if (!name) return res.status(400).json({ message: "name required" });
     const exists = await Category.findOne({ name });
     if (exists) return res.status(400).json({ message: "Category exists" });

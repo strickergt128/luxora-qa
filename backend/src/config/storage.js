@@ -41,9 +41,8 @@ const sharedMulterOptions = {
   },
 };
 
-let upload;
-
-if (storageMode === "cloud") {
+// Construye el middleware de subida según el modo de almacenamiento.
+function buildCloudUpload() {
   cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,
@@ -90,9 +89,10 @@ if (storageMode === "cloud") {
     },
   };
 
-  upload = multer({ storage: cloudStorage, ...sharedMulterOptions });
-} else {
-  // local storage (unchanged)
+  return multer({ storage: cloudStorage, ...sharedMulterOptions });
+}
+
+function buildLocalUpload() {
   const localStorage = multer.diskStorage({
     destination: (req, file, cb) => {
       cb(null, path.join(process.cwd(), "uploads/"));
@@ -102,7 +102,10 @@ if (storageMode === "cloud") {
     },
   });
 
-  upload = multer({ storage: localStorage, ...sharedMulterOptions });
+  return multer({ storage: localStorage, ...sharedMulterOptions });
 }
+
+const upload =
+  storageMode === "cloud" ? buildCloudUpload() : buildLocalUpload();
 
 export default upload;

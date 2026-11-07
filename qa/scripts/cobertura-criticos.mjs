@@ -14,6 +14,19 @@ const LINEA_BASE = 0; // registrada en la sección 2.4 (fase 1): 0 pruebas, 0 %
 const iMin = process.argv.indexOf("--min");
 const MIN = iMin > -1 ? Number(process.argv[iMin + 1]) : null;
 
+// Los 10 módulos críticos del E2. Otros archivos medidos (p. ej. utilidades nuevas) no entran al cálculo.
+const CRITICOS = new Set([
+  "backend/src/controllers/orderController.js",
+  "backend/src/utils/audit.js",
+  "backend/src/controllers/cartController.js",
+  "backend/src/controllers/authController.js",
+  "backend/src/middleware/authMiddleware.js",
+  "backend/src/utils/token.js",
+  "backend/src/middleware/roleMiddleware.js",
+  "frontend/src/utils/api.ts",
+  "frontend/src/store/slices/authSlice.ts",
+  "frontend/src/store/slices/cartSlice.ts",
+]);
 const filas = [];
 for (const app of ["backend", "frontend"]) {
   const archivo = join(RAIZ, app, "coverage", "coverage-summary.json");
@@ -24,7 +37,9 @@ for (const app of ["backend", "frontend"]) {
   const resumen = JSON.parse(readFileSync(archivo, "utf8"));
   for (const [ruta, m] of Object.entries(resumen)) {
     if (ruta === "total") continue;
-    filas.push({ archivo: relative(RAIZ, ruta).replace(/\\/g, "/"), cubiertas: m.lines.covered, total: m.lines.total });
+    const archivo = relative(RAIZ, ruta).replace(/\\/g, "/");
+    if (!CRITICOS.has(archivo)) continue;
+    filas.push({ archivo, cubiertas: m.lines.covered, total: m.lines.total });
   }
 }
 
